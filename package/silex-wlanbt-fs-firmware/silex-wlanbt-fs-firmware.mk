@@ -39,4 +39,13 @@ define SILEX_WLANBT_FS_FIRMWARE_INSTALL_TARGET_CMDS
 	$(SILEX_WLANBT_FS_FIRMWARE_INSTALL_FIRMWARE_DIRS)
 endef
 
+# Install startup script to set up the WLAN MAC address
+define SILEX_WLANBT_FS_FIRMWARE_INSTALL_ETC_INITD
+	$(INSTALL) -m 0755 -D package/silex-wlanbt-fs-firmware/S02silex \
+		$(TARGET_DIR)/etc/init.d/S02silex
+	ln -sf /run/Silex-MAC $(TARGET_DIR)/lib/firmware/wlan/wlan_mac.bin
+endef
+
+SILEX_WLANBT_FS_FIRMWARE_POST_INSTALL_TARGET_HOOKS += SILEX_WLANBT_FS_FIRMWARE_INSTALL_ETC_INITD
+
 $(eval $(generic-package))

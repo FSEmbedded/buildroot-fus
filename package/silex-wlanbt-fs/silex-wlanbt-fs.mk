@@ -46,13 +46,15 @@ SILEX_WLANBT_FS_MODULE_MAKE_OPTS += WLAN_OPEN_SOURCE=1
 
 $(eval $(kernel-module))
 
+# Moved to silex-wlanbt-fs-firmware.mk, /lib/firmware/wlan may not
+# exist here, yet
 # Install startup script to set up the WLAN MAC address
-define SILEX_WLANBT_FS_INSTALL_ETC_INITD
-	$(INSTALL) -m 0755 -D package/silex-wlanbt-fs/S02silex \
-		$(TARGET_DIR)/etc/init.d/S02silex
-	ln -sf /run/Silex-MAC $(TARGET_DIR)/lib/firmware/wlan/wlan_mac.bin
-endef
+#define SILEX_WLANBT_FS_INSTALL_ETC_INITD
+#	$(INSTALL) -m 0755 -D package/silex-wlanbt-fs/S02silex \
+#		$(TARGET_DIR)/etc/init.d/S02silex
+#	ln -sf /run/Silex-MAC $(TARGET_DIR)/lib/firmware/wlan/wlan_mac.bin
+#endef
 
-SILEX_WLANBT_FS_POST_INSTALL_TARGET_HOOKS += SILEX_WLANBT_FS_INSTALL_ETC_INITD
+#SILEX_WLANBT_FS_POST_INSTALL_TARGET_HOOKS += SILEX_WLANBT_FS_INSTALL_ETC_INITD
 
 $(eval $(generic-package))
