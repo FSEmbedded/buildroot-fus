@@ -1,0 +1,32 @@
+From 6906cbbf6e84649ad3fd20cad4727ce0462a32aa Mon Sep 17 00:00:00 2001
+Message-Id: <6906cbbf6e84649ad3fd20cad4727ce0462a32aa.1650636481.git.keller@fs-net.de>
+In-Reply-To: <8876d3464f7abe86d96420dca69dd3317368c208.1650636480.git.keller@fs-net.de>
+References: <8876d3464f7abe86d96420dca69dd3317368c208.1650636480.git.keller@fs-net.de>
+From: bings <bings@codeaurora.org>
+Date: Tue, 24 Dec 2019 18:31:13 +0800
+Subject: [PATCH 07/56] qcacld-2.0: Initialize smeconfig as {{0}}
+
+To fix build error in some platform, initialize smeconfig as {{0}}.
+
+Change-Id: I99db31ce6ff22c04e7c1c0847fd110cb457f95d9
+CRs-Fixed: 2592522
+---
+ CORE/HDD/src/wlan_hdd_wext.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/CORE/HDD/src/wlan_hdd_wext.c b/CORE/HDD/src/wlan_hdd_wext.c
+index 32a6b93..4935b35 100644
+--- a/CORE/HDD/src/wlan_hdd_wext.c
++++ b/CORE/HDD/src/wlan_hdd_wext.c
+@@ -5314,7 +5314,7 @@ int wlan_hdd_update_phymode(struct net_device *net, tHalHandle hal,
+ #endif
+     v_BOOL_t band_24 = VOS_FALSE, band_5g = VOS_FALSE;
+     v_BOOL_t ch_bond24 = VOS_FALSE, ch_bond5g = VOS_FALSE;
+-    tSmeConfigParams smeconfig = {0};
++    tSmeConfigParams smeconfig = {{0}};
+     tANI_U32 chwidth = WNI_CFG_CHANNEL_BONDING_MODE_DISABLE;
+ #ifdef WLAN_FEATURE_11AC
+     tANI_U32 vhtchanwidth;
+-- 
+2.14.5
+

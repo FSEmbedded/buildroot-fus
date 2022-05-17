@@ -1,0 +1,76 @@
+From 67c34adb48f67b435eb087fde7a4f358424ec410 Mon Sep 17 00:00:00 2001
+Message-Id: <67c34adb48f67b435eb087fde7a4f358424ec410.1650636481.git.keller@fs-net.de>
+In-Reply-To: <8876d3464f7abe86d96420dca69dd3317368c208.1650636480.git.keller@fs-net.de>
+References: <8876d3464f7abe86d96420dca69dd3317368c208.1650636480.git.keller@fs-net.de>
+From: bings <bings@codeaurora.org>
+Date: Mon, 22 Jun 2020 11:21:20 +0800
+Subject: [PATCH 37/56] qcacld-2.0: Add MODULE_LICENSE for drivers
+
+Add MODULE_LICENSE for drivers when FEATURE_LARGE_PREALLOC is enabled
+Remove useless MODULE_LICENSE in if_usb.c.
+
+Change-Id: I6ec2a8b1ada83f3d8617a4862d83cea92e17b951
+CRs-Fixed: 2710480
+---
+ CORE/HDD/src/wlan_hdd_main_module.c | 3 ++-
+ CORE/SERVICES/HIF/USB/if_usb.c      | 4 +---
+ CORE/VOSS/src/vos_memory_prealloc.c | 5 +++--
+ 3 files changed, 6 insertions(+), 6 deletions(-)
+
+diff --git a/CORE/HDD/src/wlan_hdd_main_module.c b/CORE/HDD/src/wlan_hdd_main_module.c
+index 941be50..4b07fa1 100644
+--- a/CORE/HDD/src/wlan_hdd_main_module.c
++++ b/CORE/HDD/src/wlan_hdd_main_module.c
+@@ -1,5 +1,5 @@
+ /*
+- * Copyright (c) 2019 The Linux Foundation. All rights reserved.
++ * Copyright (c) 2019-2020 The Linux Foundation. All rights reserved.
+  *
+  * Permission to use, copy, modify, and/or distribute this software for
+  * any purpose with or without fee is hereby granted, provided that the
+@@ -72,6 +72,7 @@ void __exit hdd_module_exit(void)
+ module_init(hdd_module_init);
+ module_exit(hdd_module_exit);
+ 
++MODULE_LICENSE("Dual BSD/GPL");
+ MODULE_DESCRIPTION("WLAN HOST DEVICE DRIVER");
+ 
+ #if  defined(QCA_WIFI_FTM)
+diff --git a/CORE/SERVICES/HIF/USB/if_usb.c b/CORE/SERVICES/HIF/USB/if_usb.c
+index 444ed47..fb4f186 100644
+--- a/CORE/SERVICES/HIF/USB/if_usb.c
++++ b/CORE/SERVICES/HIF/USB/if_usb.c
+@@ -1,5 +1,5 @@
+ /*
+- * Copyright (c) 2013-2016, 2018-2019 The Linux Foundation. All rights reserved.
++ * Copyright (c) 2013-2016, 2018-2020 The Linux Foundation. All rights reserved.
+  *
+  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
+  *
+@@ -871,5 +871,3 @@ void hif_bus_resume_nonos()
+ 	pr_err("Exit:%s,Line:%d \n\r", __func__,__LINE__);
+ }
+ #endif
+-
+-MODULE_LICENSE("Dual BSD/GPL");
+diff --git a/CORE/VOSS/src/vos_memory_prealloc.c b/CORE/VOSS/src/vos_memory_prealloc.c
+index 5d0ab12..f239ad4 100644
+--- a/CORE/VOSS/src/vos_memory_prealloc.c
++++ b/CORE/VOSS/src/vos_memory_prealloc.c
+@@ -1,5 +1,5 @@
+ /*
+- * Copyright (c) 2019 The Linux Foundation. All rights reserved.
++ * Copyright (c) 2019-2020 The Linux Foundation. All rights reserved.
+  *
+  * Permission to use, copy, modify, and/or distribute this software for
+  * any purpose with or without fee is hereby granted, provided that the
+@@ -305,4 +305,5 @@ static void __exit wlan_prealloc_exit(void)
+ module_init(wlan_prealloc_init)
+ module_exit(wlan_prealloc_exit);
+ 
+-MODULE_DESCRIPTION("WLAN PREALLOC DRIVER");
++MODULE_LICENSE("Dual BSD/GPL");
++MODULE_DESCRIPTION("WLAN HOST DEVICE DRIVER");
+-- 
+2.14.5
+

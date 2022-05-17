@@ -1,0 +1,3413 @@
+From 3be32eb44bd1082660023bc0e2932398300cb9bd Mon Sep 17 00:00:00 2001
+Message-Id: <3be32eb44bd1082660023bc0e2932398300cb9bd.1650636482.git.keller@fs-net.de>
+In-Reply-To: <8876d3464f7abe86d96420dca69dd3317368c208.1650636480.git.keller@fs-net.de>
+References: <8876d3464f7abe86d96420dca69dd3317368c208.1650636480.git.keller@fs-net.de>
+From: Hartmut Keller <keller@fs-net.de>
+Date: Fri, 22 Apr 2022 15:51:25 +0200
+Subject: [PATCH 56/56] Silex specific modifications for 4.5.25.38 sxa
+ 1.0.0.a19
+
+In addition to the previous patches that were only taken from newer
+versions of the qcacld-2.0 driver, Silex also has added a couple of
+own modifications. Among them are:
+
+- Improve roaming
+- Move setting of timing policy from HDD to WMA
+- Add WDA_SET_THRESH62_CMD and WDA_NFLIMIT_SET_CMD
+- Add vos_get_antenna_setting()
+- Add wlan_hdd_get_powersave()
+- Modify some default settings
+- Add SAP ioctls QCASAP_SET_BANGRADAR and QCASAP_GET_BANGRADAR
+
+The version string is modified to 4.5.25.38 sxa 1.0.0.a19.
+---
+ CORE/HDD/inc/qc_sap_ioctl.h                    |   2 +
+ CORE/HDD/inc/wlan_hdd_assoc.h                  |  11 +
+ CORE/HDD/inc/wlan_hdd_cfg.h                    |  82 +++-
+ CORE/HDD/inc/wlan_hdd_cfg80211.h               |   4 +
+ CORE/HDD/inc/wlan_hdd_main.h                   |   5 +-
+ CORE/HDD/inc/wlan_hdd_wext.h                   |   1 +
+ CORE/HDD/src/wlan_hdd_assoc.c                  | 250 ++++++++++-
+ CORE/HDD/src/wlan_hdd_cfg.c                    |  64 +++
+ CORE/HDD/src/wlan_hdd_cfg80211.c               | 209 ++++++++-
+ CORE/HDD/src/wlan_hdd_hostapd.c                |  11 +-
+ CORE/HDD/src/wlan_hdd_main.c                   | 183 ++++++++
+ CORE/HDD/src/wlan_hdd_nan_datapath.c           |   3 +
+ CORE/HDD/src/wlan_hdd_tx_rx.c                  |   9 +-
+ CORE/HDD/src/wlan_hdd_wext.c                   |  27 ++
+ CORE/HDD/src/wlan_hdd_wowl.c                   |   2 +
+ CORE/MAC/inc/aniGlobal.h                       |   2 +
+ CORE/MAC/inc/qwlan_version.h                   |   2 +-
+ CORE/MAC/inc/sirApi.h                          |   4 +
+ CORE/MAC/inc/wni_cfg.h                         |   3 +
+ CORE/MAC/src/include/sirParams.h               |   5 +
+ CORE/MAC/src/pe/lim/limAssocUtils.c            |   2 +
+ CORE/MAC/src/pe/lim/limProcessAssocRspFrame.c  |  49 +++
+ CORE/MAC/src/pe/lim/limProcessMessageQueue.c   |   8 +
+ CORE/MAC/src/pe/lim/limProcessMlmReqMessages.c |   4 +-
+ CORE/MAC/src/pe/lim/limScanResultUtils.c       |   5 +
+ CORE/MAC/src/pe/lim/limSendSmeRspMessages.c    |   3 +
+ CORE/MAC/src/pe/lim/limUtils.c                 |   5 +
+ CORE/SAP/inc/sapApi.h                          |   1 +
+ CORE/SAP/src/sapApiLinkCntl.c                  |   4 +-
+ CORE/SAP/src/sapFsm.c                          | 570 ++++++++++++++++++++++++-
+ CORE/SERVICES/COMMON/wmi_tlv_defs.h            |  14 +
+ CORE/SERVICES/COMMON/wmi_unified.h             |  23 +
+ CORE/SERVICES/WMA/wma.c                        | 233 +++++++++-
+ CORE/SERVICES/WMA/wma.h                        |   2 +
+ CORE/SERVICES/WMI/wmi_unified.c                |   4 +
+ CORE/SME/inc/csrApi.h                          |   2 +
+ CORE/SME/inc/smeInternal.h                     |   3 +
+ CORE/SME/inc/sme_Api.h                         |   4 +
+ CORE/SME/src/csr/csrApiRoam.c                  |  36 +-
+ CORE/SME/src/csr/csrApiScan.c                  |   1 +
+ CORE/SME/src/csr/csrNeighborRoam.c             |  15 +-
+ CORE/SME/src/csr/csrTdlsProcess.c              |   1 +
+ CORE/SME/src/csr/csrUtil.c                     |   9 +
+ CORE/SME/src/nan/nan_datapath_api.c            |   1 +
+ CORE/SME/src/pmc/pmc.c                         |   6 +-
+ CORE/SME/src/pmc/pmcApi.c                      |  12 +-
+ CORE/SME/src/sme_common/sme_Api.c              |  13 +
+ CORE/SYS/legacy/src/utils/src/macTrace.c       |   1 +
+ CORE/UTILS/FWLOG/dbglog_host.c                 |   2 +-
+ CORE/VOSS/inc/vos_api.h                        |   2 +
+ CORE/VOSS/inc/vos_cnss.h                       |   3 +
+ CORE/VOSS/src/vos_api.c                        |   7 +
+ CORE/VOSS/src/vos_nvitem.c                     |   4 +-
+ CORE/VOSS/src/vos_sched.c                      |   2 +-
+ CORE/WDA/inc/wlan_qct_wda.h                    |   7 +
+ Kbuild                                         |   5 +-
+ 56 files changed, 1891 insertions(+), 51 deletions(-)
+
+diff --git a/CORE/HDD/inc/qc_sap_ioctl.h b/CORE/HDD/inc/qc_sap_ioctl.h
+index 85fca9a..d130b64 100644
+--- a/CORE/HDD/inc/qc_sap_ioctl.h
++++ b/CORE/HDD/inc/qc_sap_ioctl.h
+@@ -297,6 +297,8 @@ enum {
+     QCSAP_SET_CANDIDATE_CH,
+     QCSAP_MULTICAST_DEL_GROUP,
+     QCSAP_GET_MULTICAST_GROUP_INFO,
++    QCASAP_SET_BANGRADAR,
++    QCASAP_GET_BANGRADAR,
+ };
+ 
+ int iw_get_channel_list(struct net_device *dev,
+diff --git a/CORE/HDD/inc/wlan_hdd_assoc.h b/CORE/HDD/inc/wlan_hdd_assoc.h
+index 166ca05..c58df48 100644
+--- a/CORE/HDD/inc/wlan_hdd_assoc.h
++++ b/CORE/HDD/inc/wlan_hdd_assoc.h
+@@ -129,6 +129,13 @@ struct hdd_conn_flag {
+ #define ANTENNA_SEL_INFO_TX_SOUNDING_PPDU	0x40
+ #define ANTENNA_SEL_INFO_RSVD			0x80
+ 
++/* First octet of HT Operation Information within HT Operation element */
++#define HT_INFO_HT_PARAM_SECONDARY_CHNL_OFF_MASK	((u8) BIT(0) | BIT(1))
++#define HT_INFO_HT_PARAM_SECONDARY_CHNL_ABOVE		((u8) BIT(0))
++#define HT_INFO_HT_PARAM_SECONDARY_CHNL_BELOW		((u8) BIT(0) | BIT(1))
++#define HT_INFO_HT_PARAM_STA_CHNL_WIDTH		((u8) BIT(2))
++#define HT_INFO_HT_PARAM_RIFS_MODE			((u8) BIT(3))
++
+ /**
+  * struct rate_info - bitrate information
+  *
+@@ -300,4 +307,8 @@ VOS_STATUS hdd_roamDeregisterSTA(hdd_adapter_t *adapter, uint8_t sta_id);
+  */
+ hdd_adapter_t *hdd_get_sta_connection_in_progress(hdd_context_t *hdd_ctx);
+ 
++VOS_STATUS hdd_chan_switch_notify_for_sta(hdd_adapter_t *pAdapter,
++		struct net_device *dev,
++		tCsrRoamInfo *roam_info);
++
+ #endif
+diff --git a/CORE/HDD/inc/wlan_hdd_cfg.h b/CORE/HDD/inc/wlan_hdd_cfg.h
+old mode 100644
+new mode 100755
+index bcc4225..d7b1178
+--- a/CORE/HDD/inc/wlan_hdd_cfg.h
++++ b/CORE/HDD/inc/wlan_hdd_cfg.h
+@@ -1552,7 +1552,7 @@ typedef enum
+ #define CFG_REPORT_MAX_LINK_SPEED                  "gReportMaxLinkSpeed"
+ #define CFG_REPORT_MAX_LINK_SPEED_MIN              ( eHDD_LINK_SPEED_REPORT_ACTUAL )
+ #define CFG_REPORT_MAX_LINK_SPEED_MAX              ( eHDD_LINK_SPEED_REPORT_MAX_SCALED )
+-#define CFG_REPORT_MAX_LINK_SPEED_DEFAULT          ( eHDD_LINK_SPEED_REPORT_MAX_SCALED )
++#define CFG_REPORT_MAX_LINK_SPEED_DEFAULT          ( eHDD_LINK_SPEED_REPORT_ACTUAL )
+ 
+ #define CFG_SET_RTS_FOR_SIFS_BURSTING           "gSetRTSForSIFSBursting"
+ #define CFG_SET_RTS_FOR_SIFS_BURSTING_MIN       (0)
+@@ -2513,6 +2513,20 @@ typedef enum
+ #define CFG_DPD_RECALIB_DURATION_MAX_MAX       ( 180 )
+ #define CFG_DPD_RECALIB_DURATION_MAX_DEFAULT   ( 120 )
+ 
++/*
++ * DTIM Policy
++ * Default: STICK
++ *
++ * IGNORE_DTIM = 0x01,
++ * NORMAL_DTIM = 0x02,
++ * STICK_DTIM  = 0x03,
++ * AUTO_DTIM   = 0x04,
++ */
++#define CFG_ENABLE_DTIM_POLICY_NAME          "gDTIMPolicy"
++#define CFG_ENABLE_DTIM_POLICY_MIN           ( 0 )
++#define CFG_ENABLE_DTIM_POLICY_MAX           ( 4 )
++#define CFG_ENABLE_DTIM_POLICY_DEFAULT       ( 4 )
++
+ /*
+  * Enable/Disable Modulated DTIM feature
+  * Default: Disable
+@@ -3222,7 +3236,7 @@ This feature requires the dependent cfg.ini "gRoamPrefer5GHz" set to 1 */
+ #define CFG_SAP_MAX_NO_PEERS                       "gSoftApMaxPeers"
+ #define CFG_SAP_MAX_NO_PEERS_MIN                   (1)
+ #define CFG_SAP_MAX_NO_PEERS_MAX                   (32)
+-#define CFG_SAP_MAX_NO_PEERS_DEFAULT               (32)
++#define CFG_SAP_MAX_NO_PEERS_DEFAULT               (5)
+ 
+ /*
+  * Max peers number of P2P GO
+@@ -3453,7 +3467,7 @@ This feature requires the dependent cfg.ini "gRoamPrefer5GHz" set to 1 */
+ #define CFG_ROAMING_DFS_CHANNEL_ENABLED_ACTIVE     (2)
+ #define CFG_ROAMING_DFS_CHANNEL_MIN                (CFG_ROAMING_DFS_CHANNEL_DISABLED)
+ #define CFG_ROAMING_DFS_CHANNEL_MAX                (CFG_ROAMING_DFS_CHANNEL_ENABLED_ACTIVE)
+-#define CFG_ROAMING_DFS_CHANNEL_DEFAULT            (CFG_ROAMING_DFS_CHANNEL_DISABLED)
++#define CFG_ROAMING_DFS_CHANNEL_DEFAULT            (CFG_ROAMING_DFS_CHANNEL_ENABLED_NORMAL)
+ 
+ #ifdef FEATURE_BUS_BANDWIDTH
+ #define CFG_BUS_BANDWIDTH_HIGH_THRESHOLD           "gBusBandwidthHighThreshold"
+@@ -5647,6 +5661,49 @@ FG_BTC_BT_INTERVAL_PAGE_P2P_STA_DEFAULT
+ #define CFG_HOST_LOG_CUSTOM_NETLINK_PROTO_MIN     (0)
+ #define CFG_HOST_LOG_CUSTOM_NETLINK_PROTO_MAX     (32)
+ #endif
++
++#if 1
++#define CFG_ENABLE_NFLIMIT2G_NAME                   "gNFlimit_max2g"
++#define CFG_ENABLE_NFLIMIT2G_MIN                    ( 0 )
++#define CFG_ENABLE_NFLIMIT2G_MAX                    ( 255 )
++#define CFG_ENABLE_NFLIMIT2G_DEFAULT                ( 0 )
++
++#define CFG_ENABLE_NFLIMIT5G_NAME                   "gNFlimit_max5g"
++#define CFG_ENABLE_NFLIMIT5G_MIN                    ( 0 )
++#define CFG_ENABLE_NFLIMIT5G_MAX                    ( 255 )
++#define CFG_ENABLE_NFLIMIT5G_DEFAULT                ( 0 )
++
++#define CFG_SET_THRESH62_2G_NAME                   "gthresh62_2g"
++#define CFG_SET_THRESH62_2G_MIN                    ( 0 )
++#define CFG_SET_THRESH62_2G_MAX                    ( 255 )
++#define CFG_SET_THRESH62_2G_DEFAULT                ( 0 )
++
++#define CFG_SET_THRESH62_5G_NAME                   "gthresh62_5g"
++#define CFG_SET_THRESH62_5G_MIN                    ( 0 )
++#define CFG_SET_THRESH62_5G_MAX                    ( 255 )
++#define CFG_SET_THRESH62_5G_DEFAULT                ( 0 )
++
++#define CFG_ENABLE_NFLIMIT2G_NAME_ETSI             "gNFlimit_max2g_etsi"
++#define CFG_ENABLE_NFLIMIT2G_MIN_ETSI              ( 0 )
++#define CFG_ENABLE_NFLIMIT2G_MAX_ETSI              ( 255 )
++#define CFG_ENABLE_NFLIMIT2G_DEFAULT_ETSI          ( 0 )
++
++#define CFG_ENABLE_NFLIMIT5G_NAME_ETSI             "gNFlimit_max5g_etsi"
++#define CFG_ENABLE_NFLIMIT5G_MIN_ETSI              ( 0 )
++#define CFG_ENABLE_NFLIMIT5G_MAX_ETSI              ( 255 )
++#define CFG_ENABLE_NFLIMIT5G_DEFAULT_ETSI          ( 96 )
++
++#define CFG_SET_THRESH62_2G_NAME_ETSI              "gthresh62_2g_etsi"
++#define CFG_SET_THRESH62_2G_MIN_ETSI               ( 0 )
++#define CFG_SET_THRESH62_2G_MAX_ETSI               ( 255 )
++#define CFG_SET_THRESH62_2G_DEFAULT_ETSI           ( 19 )
++
++#define CFG_SET_THRESH62_5G_NAME_ETSI              "gthresh62_5g_etsi"
++#define CFG_SET_THRESH62_5G_MIN_ETSI               ( 0 )
++#define CFG_SET_THRESH62_5G_MAX_ETSI               ( 255 )
++#define CFG_SET_THRESH62_5G_DEFAULT_ETSI           ( 16 )
++#endif
++
+ /*---------------------------------------------------------------------------
+   Type declarations
+   -------------------------------------------------------------------------*/
+@@ -5745,7 +5802,11 @@ struct hdd_config {
+    v_U8_t        delay_before_vdev_stop;
+    v_U8_t        nOpportunisticThresholdDiff;
+    v_U8_t        nRoamRescanRssiDiff;
++#ifndef NO_SILEX_CHANGE
++   v_U8_t        neighborScanChanList[WNI_CFG_VALID_CHANNEL_LIST_LEN_FOR_QCOM_CFG_INI];
++#else /* NO_SILEX_CHANGE */
+    v_U8_t        neighborScanChanList[WNI_CFG_VALID_CHANNEL_LIST_LEN];
++#endif /* NO_SILEX_CHANGE */
+    v_U16_t       nNeighborScanMinChanTime;
+    v_U16_t       nNeighborScanMaxChanTime;
+    v_U16_t       nMaxNeighborReqTries;
+@@ -6588,6 +6649,21 @@ struct hdd_config {
+ 
+    uint32_t  mask_tx_legacy_rate;
+    uint32_t  mask_tx_ht_rate;
++   /* silex */
++   uint8_t   dtim_policy;
++
++#if 1
++/* Added parameter by silex */
++   uint8_t                     ps_usr_setting;
++   uint16_t                    nflimit_max2g;
++   uint16_t                    nflimit_max5g;
++   uint16_t                    thresh62_2g;
++   uint16_t                    thresh62_5g;
++   uint16_t                    nflimit_max2g_etsi;
++   uint16_t                    nflimit_max5g_etsi;
++   uint16_t                    thresh62_2g_etsi;
++   uint16_t                    thresh62_5g_etsi;
++#endif
+ };
+ 
+ typedef struct hdd_config hdd_config_t;
+diff --git a/CORE/HDD/inc/wlan_hdd_cfg80211.h b/CORE/HDD/inc/wlan_hdd_cfg80211.h
+index 06493d3..89150b5 100644
+--- a/CORE/HDD/inc/wlan_hdd_cfg80211.h
++++ b/CORE/HDD/inc/wlan_hdd_cfg80211.h
+@@ -2944,6 +2944,10 @@ struct cfg80211_bss* wlan_hdd_cfg80211_update_bss_db( hdd_adapter_t *pAdapter,
+ int wlan_hdd_cfg80211_update_bss(struct wiphy *wiphy,
+ 			hdd_adapter_t *pAdapter);
+ 
++struct cfg80211_bss* wlan_hdd_cfg80211_update_channel_sw(
++            hdd_adapter_t *pAdapter,
++            tSirBssDescription *bss_desc);
++
+ #ifdef FEATURE_WLAN_LFR
+ int wlan_hdd_cfg80211_pmksa_candidate_notify(
+                     hdd_adapter_t *pAdapter, tCsrRoamInfo *pRoamInfo,
+diff --git a/CORE/HDD/inc/wlan_hdd_main.h b/CORE/HDD/inc/wlan_hdd_main.h
+index f252966..d25ce8c 100644
+--- a/CORE/HDD/inc/wlan_hdd_main.h
++++ b/CORE/HDD/inc/wlan_hdd_main.h
+@@ -2194,6 +2194,7 @@ struct hdd_context_s
+ #endif
+     adf_os_spinlock_t restrict_offchan_lock;
+     bool  restrict_offchan_flag;
++    bool dfs_csr_block_tx;
+ 
+ };
+ 
+@@ -2309,7 +2310,9 @@ void hdd_set_ssr_required(e_hdd_ssr_required value);
+ 
+ VOS_STATUS hdd_enable_bmps_imps(hdd_context_t *pHddCtx);
+ VOS_STATUS hdd_disable_bmps_imps(hdd_context_t *pHddCtx, tANI_U8 session_type);
+-
++#if 0 /* silex : not used, because now set dtim policy in WMA.*/
++void wlan_hdd_set_dtim_policy(hdd_context_t *pHddCtx);
++#endif
+ /**
+  * hdd_thermal_suspend_queue_work() - Queue a thermal suspend work
+  * @hdd_ctx:     Pointer to hdd_context_t
+diff --git a/CORE/HDD/inc/wlan_hdd_wext.h b/CORE/HDD/inc/wlan_hdd_wext.h
+index 9ecab62..27d4142 100644
+--- a/CORE/HDD/inc/wlan_hdd_wext.h
++++ b/CORE/HDD/inc/wlan_hdd_wext.h
+@@ -471,6 +471,7 @@ int wlan_hdd_set_mc_addr_list(hdd_adapter_t *pAdapter, v_U8_t set);
+ void* wlan_hdd_change_country_code_callback(void *pAdapter);
+ 
+ VOS_STATUS  wlan_hdd_set_powersave(hdd_adapter_t *pAdapter, int mode);
++VOS_STATUS  wlan_hdd_get_powersave(hdd_adapter_t *pAdapter, bool *mode);
+ 
+ /**
+  * enum tdcc_cmd_type - type of TDCC commmand to process
+diff --git a/CORE/HDD/src/wlan_hdd_assoc.c b/CORE/HDD/src/wlan_hdd_assoc.c
+index 30aaf8f..98c50e6 100644
+--- a/CORE/HDD/src/wlan_hdd_assoc.c
++++ b/CORE/HDD/src/wlan_hdd_assoc.c
+@@ -146,6 +146,44 @@ static const int beacon_filter_table[] = {
+ #endif
+ };
+ 
++struct convert_vht_seg_table {
++	int center_freq;
++	int vht_oper_seg1;
++};
++
++static const struct convert_vht_seg_table g_vht_seg_table[] = {
++	{5180, 5210},    /* 36ch */
++	{5200, 5210},    /* 40ch */
++	{5220, 5210},    /* 44ch */
++	{5240, 5210},    /* 48ch */
++
++	{5260, 5290},    /* 52ch */
++	{5280, 5290},    /* 56ch */
++	{5300, 5290},    /* 60ch */
++	{5320, 5290},    /* 64ch */
++
++	{5500, 5530},    /* 100ch */
++	{5520, 5530},    /* 104ch */
++	{5540, 5530},    /* 108ch */
++	{5560, 5530},    /* 112ch */
++
++	{5580, 5610},    /* 116ch */
++	{5600, 5610},    /* 120ch */
++	{5620, 5610},    /* 124ch */
++	{5640, 5610},    /* 128ch */
++
++	{5660, 5690},    /* 132ch */
++	{5680, 5690},    /* 136ch */
++	{5700, 5690},    /* 140ch */
++	//{5720, 5690},    /* 144ch */
++
++	{5745, 5775},    /* 149ch */
++	{5765, 5775},    /* 153ch */
++	{5785, 5775},    /* 157ch */
++	{5805, 5775},    /* 161ch */
++	{0, 0},         /* end */
++};
++
+ static eHalStatus hdd_RoamSetKeyCompleteHandler( hdd_adapter_t *pAdapter,
+                                                 tCsrRoamInfo *pRoamInfo,
+                                                 tANI_U32 roamId,
+@@ -202,6 +240,37 @@ static void wlan_hdd_sae_callback(hdd_adapter_t *adapter,
+ { }
+ #endif
+ 
++static void wlan_hdd_channel_sw_callback(hdd_adapter_t *pAdapter,
++                                         tCsrRoamInfo *roam_info)
++{
++    tCsrRoamConnectedProfile roamProfile;
++    struct net_device *dev = pAdapter->dev;
++    tHalHandle hHal = WLAN_HDD_GET_HAL_CTX(pAdapter);
++    struct cfg80211_bss *bss = NULL;
++
++    memset(&roamProfile, 0, sizeof(tCsrRoamConnectedProfile));
++    sme_RoamGetConnectProfile(hHal, pAdapter->sessionId, &roamProfile);
++
++    if (NULL != roamProfile.pBssDesc) {
++        hddLog(LOG1, "CSA: new channel=%u", roamProfile.pBssDesc->channelId);
++        bss = wlan_hdd_cfg80211_update_channel_sw(pAdapter, roamProfile.pBssDesc);
++        if (NULL == bss) {
++            hddLog(LOGE, "CSA: channel update failure...");
++        }
++        else {
++            hddLog(LOG1, "CSA: channel update success!");
++        }
++        sme_RoamFreeConnectProfile(hHal, &roamProfile);
++    }
++    else{
++        hddLog(LOGE, "CSA: pBssDesc not found...");
++    }
++
++    /* update for apps */
++    hddLog(LOGE, "%s(%d): hdd_chan_switch_notify_for_sta", __func__, __LINE__);
++    hdd_chan_switch_notify_for_sta(pAdapter, dev, roam_info);
++}
++
+ static v_VOID_t
+ hdd_connSetAuthenticated(hdd_adapter_t *pAdapter, v_U8_t authState)
+ {
+@@ -1195,6 +1264,146 @@ static void hdd_SendNewAPChannelInfo(struct net_device *dev, hdd_adapter_t *pAda
+ 
+ #endif /* FEATURE_WLAN_ESE */
+ 
++static int calc_vht_oper_seg1(int center_freq)
++{
++	int i;
++
++	for (i = 0; g_vht_seg_table[i].center_freq != 0; i++) {
++		if (g_vht_seg_table[i].center_freq == center_freq) {
++			VOS_TRACE(VOS_MODULE_ID_HDD, VOS_TRACE_LEVEL_INFO,
++				"%s: found seg1=%u center_freq=%u",
++				__func__, g_vht_seg_table[i].vht_oper_seg1, center_freq);
++			return g_vht_seg_table[i].vht_oper_seg1;
++		}
++	}
++	VOS_TRACE(VOS_MODULE_ID_HDD, VOS_TRACE_LEVEL_INFO,
++		"%s: not found seg1, return center_freq=%u as HT20",
++		__func__, center_freq);
++
++	return center_freq;
++}
++
++static void
++hdd_update_chandef_vht80_for_sta(hdd_adapter_t *pAdapter,
++		struct cfg80211_chan_def *chandef,
++		struct ieee80211_channel *chan,
++		u8   vht_channel_width)
++{
++
++	VOS_TRACE(VOS_MODULE_ID_HDD, VOS_TRACE_LEVEL_INFO,
++		"ch_width %u", vht_channel_width);
++
++	switch (vht_channel_width) {
++	case 0: /* 20 or 40MHz */
++		VOS_TRACE(VOS_MODULE_ID_HDD, VOS_TRACE_LEVEL_INFO,
++			"vht ch_width %u, will be 20 or 40MHz", vht_channel_width);
++		break;
++
++	case 1: /* 80MHz */
++		chandef->width = NL80211_CHAN_WIDTH_80;
++		chandef->center_freq1 = calc_vht_oper_seg1(chan->center_freq);
++		chandef->center_freq2 = 0;
++		VOS_TRACE(VOS_MODULE_ID_HDD, VOS_TRACE_LEVEL_INFO,
++				"%s: width=%u freq1=%u freq2=%u",
++				__func__, chandef->width, chandef->center_freq1, chandef->center_freq2);
++		break;
++
++	case 2: /* 160MHz */
++	case 3: /* 80+80MHz */
++	default:
++		/* Todo, please add related codes if support 160MHZ or others */
++		VOS_TRACE(VOS_MODULE_ID_HDD, VOS_TRACE_LEVEL_ERROR,
++			"unsupport vht ch_width %u", vht_channel_width);
++		break;
++	}
++}
++
++/**
++ * hdd_chan_switch_notify_for_sta() - Function to notify wpa_supplicant about channel change
++ * @pAdapter	sta adapter
++ * @dev:		Net device structure
++ * @roam_info:	Roaming Information
++ *
++ * Return: Success on intimating userspace
++ */
++VOS_STATUS hdd_chan_switch_notify_for_sta(hdd_adapter_t *pAdapter,
++		struct net_device *dev,
++		tCsrRoamInfo *roam_info)
++{
++	u8 oper_chan;
++	struct ieee80211_channel *chan;
++	struct cfg80211_chan_def chandef;
++	enum nl80211_channel_type channel_type;
++	eCsrCfgDot11Mode phy_mode;
++	struct ieee80211_ht_operation ht_oper;
++	uint32_t freq;
++	tHalHandle hal = WLAN_HDD_GET_HAL_CTX(pAdapter);
++	hdd_station_ctx_t *pHddStaCtx = WLAN_HDD_GET_STATION_CTX_PTR(pAdapter);
++
++	if (NULL == hal || NULL == pHddStaCtx || NULL == dev ||
++			NULL == roam_info || NULL == roam_info->pBssDesc) {
++		VOS_TRACE(VOS_MODULE_ID_HDD, VOS_TRACE_LEVEL_ERROR,
++				"%s: NULL: hal=%p pHddStaCtx=%p dev=%p roam_info=%p pBssDesc=%p",
++				__func__, hal, pHddStaCtx, dev, roam_info, roam_info->pBssDesc);
++		return VOS_STATUS_E_FAILURE;
++	}
++
++	oper_chan = roam_info->pBssDesc->channelId;
++	freq = vos_chan_to_freq(oper_chan);
++
++#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4,11,0))
++	chan = ieee80211_get_channel(pAdapter->wdev.wiphy, freq);
++#else
++	chan = __ieee80211_get_channel(pAdapter->wdev.wiphy, freq);
++#endif
++	if (!chan) {
++		VOS_TRACE(VOS_MODULE_ID_HDD, VOS_TRACE_LEVEL_ERROR,
++				"%s: Invalid input frequency for channel conversion",
++				 __func__);
++		return VOS_STATUS_E_FAILURE;
++	}
++	chandef.chan = chan;
++
++	phy_mode = pHddStaCtx->conn_info.dot11Mode;
++	ht_oper = pHddStaCtx->conn_info.ht_operation;
++
++	VOS_TRACE(VOS_MODULE_ID_HDD, VOS_TRACE_LEVEL_INFO,
++			"%s: phy_mode=%u ht_param=0x%x\n", __func__, phy_mode, ht_oper.ht_param);
++
++	switch (phy_mode) {
++	case eCSR_CFG_DOT11_MODE_11N:
++	case eCSR_CFG_DOT11_MODE_11N_ONLY:
++	case eCSR_CFG_DOT11_MODE_11AC:
++	case eCSR_CFG_DOT11_MODE_11AC_ONLY:
++		if (ht_oper.ht_param & HT_INFO_HT_PARAM_STA_CHNL_WIDTH) {
++			int sec = ht_oper.ht_param & HT_INFO_HT_PARAM_SECONDARY_CHNL_OFF_MASK;
++			if (sec == HT_INFO_HT_PARAM_SECONDARY_CHNL_ABOVE)
++				 channel_type = NL80211_CHAN_HT40PLUS;
++			else if (sec == HT_INFO_HT_PARAM_SECONDARY_CHNL_BELOW)
++				channel_type = NL80211_CHAN_HT40MINUS;
++			else
++				channel_type = NL80211_CHAN_HT40PLUS;
++		}
++		else
++			channel_type = NL80211_CHAN_HT20;
++		break;
++	default:
++		channel_type = NL80211_CHAN_NO_HT;
++		break;
++	}
++
++	cfg80211_chandef_create(&chandef, chan, channel_type);
++
++	if ((phy_mode == eCSR_CFG_DOT11_MODE_11AC) ||
++	    (phy_mode == eCSR_CFG_DOT11_MODE_11AC_ONLY))
++		hdd_update_chandef_vht80_for_sta(pAdapter, &chandef,
++						chan, pHddStaCtx->conn_info.vht_operation.chan_width);
++
++	cfg80211_ch_switch_notify(dev, &chandef);
++
++	return VOS_STATUS_SUCCESS;
++}
++
+ static void
+ hdd_SendUpdateBeaconIEsEvent(hdd_adapter_t *pAdapter,
+                              tCsrRoamInfo *pCsrRoamInfo)
+@@ -2886,6 +3095,12 @@ static eHalStatus hdd_AssociationCompletionHandler( hdd_adapter_t *pAdapter, tCs
+                     "Cannot register STA with TL.  Failed with vosStatus = %d [%08X]",
+                     vosStatus, vosStatus );
+         }
++
++#if 0 /* silex : not used, because now set dtim policy in WMA.*/
++        /* set DTIM Policy from qcom_cfg.ini */
++        wlan_hdd_set_dtim_policy(pHddCtx);
++#endif
++
+ #ifdef WLAN_FEATURE_11W
+         vos_mem_zero( &pAdapter->hdd_stats.hddPmfStats,
+                       sizeof(pAdapter->hdd_stats.hddPmfStats) );
+@@ -4831,7 +5046,8 @@ hdd_smeRoamCallback(void *pContext, tCsrRoamInfo *pRoamInfo, tANI_U32 roamId,
+             VOS_TRACE(VOS_MODULE_ID_HDD, VOS_TRACE_LEVEL_INFO,
+                     "****eCSR_ROAM_ASSOCIATION_COMPLETION****");
+             // To Do - address probable memory leak with WEP encryption upon successful association
+-            if (eCSR_ROAM_RESULT_ASSOCIATED != roamResult)
++            /* Don't delete roamInfo which is being used because it can be Roaming now if result is ROAM_RESULT_FAILURE. */
++            if (eCSR_ROAM_RESULT_ASSOCIATED != roamResult && eCSR_ROAM_RESULT_FAILURE != roamResult)
+             {
+                //Clear saved connection information in HDD
+                hdd_connRemoveConnectInfo( WLAN_HDD_GET_STATION_CTX_PTR(pAdapter) );
+@@ -4889,6 +5105,32 @@ hdd_smeRoamCallback(void *pContext, tCsrRoamInfo *pRoamInfo, tANI_U32 roamId,
+                                          eSME_FULL_PWR_NEEDED_BY_HDD);
+                     }
+                 }
++
++#if 1
++/* silex add */
++				{
++				v_U8_t ps_mode = pHddCtx->cfg_ini->ps_usr_setting;
++
++				if(!pHddCtx->cfg_ini->enablePowersaveOffload)
++				{
++					/* skip */
++				}
++				else
++				{
++					if (ps_mode == DRIVER_POWER_MODE_AUTO) {
++						sme_PsOffloadEnablePowerSave(WLAN_HDD_GET_HAL_CTX(pAdapter),
++					                pAdapter->sessionId);
++					}
++					else
++					{
++						sme_PsOffloadDisablePowerSave(WLAN_HDD_GET_HAL_CTX(pAdapter),
++						            NULL, NULL,
++					                pAdapter->sessionId);
++					}
++				}
++				}
++#endif
++
+                 if ((pHddCtx) &&
+                     (FULL_POWER == pmcGetPmcState(pHddCtx->hHal)) &&
+                     (VOS_TRUE == pHddStaCtx->hdd_ReassocScenario) &&
+@@ -5045,7 +5287,11 @@ hdd_smeRoamCallback(void *pContext, tCsrRoamInfo *pRoamInfo, tANI_U32 roamId,
+         case eCSR_ROAM_SAE_COMPUTE:
+             if (pRoamInfo)
+                 wlan_hdd_sae_callback(pAdapter, pRoamInfo);
+-        break;
++            break;
++        case eCSR_ROAM_STA_CHANNEL_SW_RSP:
++            if (pRoamInfo)
++                wlan_hdd_channel_sw_callback(pAdapter, pRoamInfo);
++            break;
+         default:
+             break;
+     }
+diff --git a/CORE/HDD/src/wlan_hdd_cfg.c b/CORE/HDD/src/wlan_hdd_cfg.c
+old mode 100644
+new mode 100755
+index 1ea275d..c57b49e
+--- a/CORE/HDD/src/wlan_hdd_cfg.c
++++ b/CORE/HDD/src/wlan_hdd_cfg.c
+@@ -2207,6 +2207,13 @@ REG_TABLE_ENTRY g_registry_table[] =
+                  CFG_THROTTLE_DUTY_CYCLE_LEVEL3_MIN,
+                  CFG_THROTTLE_DUTY_CYCLE_LEVEL3_MAX ),
+ 
++	REG_VARIABLE( CFG_ENABLE_DTIM_POLICY_NAME, WLAN_PARAM_Integer,
++                 hdd_config_t, dtim_policy,
++                 VAR_FLAGS_OPTIONAL | VAR_FLAGS_RANGE_CHECK_ASSUME_DEFAULT,
++                 CFG_ENABLE_DTIM_POLICY_DEFAULT,
++                 CFG_ENABLE_DTIM_POLICY_MIN,
++                 CFG_ENABLE_DTIM_POLICY_MAX ),
++	
+    REG_VARIABLE( CFG_ENABLE_MODULATED_DTIM_NAME, WLAN_PARAM_Integer,
+                  hdd_config_t, enableModulatedDTIM,
+                  VAR_FLAGS_OPTIONAL | VAR_FLAGS_RANGE_CHECK_ASSUME_DEFAULT,
+@@ -5480,6 +5487,63 @@ REG_TABLE_ENTRY g_registry_table[] =
+ 		CFG_HOST_LOG_CUSTOM_NETLINK_PROTO_MIN,
+ 		CFG_HOST_LOG_CUSTOM_NETLINK_PROTO_MAX),
+ #endif
++#if 1
++   REG_VARIABLE( CFG_ENABLE_NFLIMIT2G_NAME, WLAN_PARAM_Integer,
++		hdd_config_t, nflimit_max2g,
++		VAR_FLAGS_OPTIONAL | VAR_FLAGS_RANGE_CHECK_ASSUME_DEFAULT,
++		CFG_ENABLE_NFLIMIT2G_DEFAULT,
++		CFG_ENABLE_NFLIMIT2G_MIN,
++		CFG_ENABLE_NFLIMIT2G_MAX ),
++
++   REG_VARIABLE( CFG_ENABLE_NFLIMIT5G_NAME, WLAN_PARAM_Integer,
++		hdd_config_t, nflimit_max5g,
++		VAR_FLAGS_OPTIONAL | VAR_FLAGS_RANGE_CHECK_ASSUME_DEFAULT,
++		CFG_ENABLE_NFLIMIT5G_DEFAULT,
++		CFG_ENABLE_NFLIMIT5G_MIN,
++		CFG_ENABLE_NFLIMIT5G_MAX ),
++
++   REG_VARIABLE( CFG_SET_THRESH62_2G_NAME, WLAN_PARAM_Integer,
++              hdd_config_t, thresh62_2g,
++              VAR_FLAGS_OPTIONAL | VAR_FLAGS_RANGE_CHECK_ASSUME_DEFAULT,
++              CFG_SET_THRESH62_2G_DEFAULT,
++              CFG_SET_THRESH62_2G_MIN,
++              CFG_SET_THRESH62_2G_MAX ),
++
++   REG_VARIABLE( CFG_SET_THRESH62_5G_NAME, WLAN_PARAM_Integer,
++              hdd_config_t, thresh62_5g,
++              VAR_FLAGS_OPTIONAL | VAR_FLAGS_RANGE_CHECK_ASSUME_DEFAULT,
++              CFG_SET_THRESH62_5G_DEFAULT,
++              CFG_SET_THRESH62_5G_MIN,
++              CFG_SET_THRESH62_5G_MAX ),
++
++   REG_VARIABLE( CFG_ENABLE_NFLIMIT2G_NAME_ETSI, WLAN_PARAM_Integer,
++              hdd_config_t, nflimit_max2g_etsi,
++              VAR_FLAGS_OPTIONAL | VAR_FLAGS_RANGE_CHECK_ASSUME_DEFAULT,
++              CFG_ENABLE_NFLIMIT2G_DEFAULT_ETSI,
++              CFG_ENABLE_NFLIMIT2G_MIN_ETSI,
++              CFG_ENABLE_NFLIMIT2G_MAX_ETSI ),
++
++   REG_VARIABLE( CFG_ENABLE_NFLIMIT5G_NAME_ETSI, WLAN_PARAM_Integer,
++              hdd_config_t, nflimit_max5g_etsi,
++              VAR_FLAGS_OPTIONAL | VAR_FLAGS_RANGE_CHECK_ASSUME_DEFAULT,
++              CFG_ENABLE_NFLIMIT5G_DEFAULT_ETSI,
++              CFG_ENABLE_NFLIMIT5G_MIN_ETSI,
++              CFG_ENABLE_NFLIMIT5G_MAX_ETSI ),
++
++   REG_VARIABLE( CFG_SET_THRESH62_5G_NAME_ETSI, WLAN_PARAM_Integer,
++              hdd_config_t, thresh62_5g_etsi,
++              VAR_FLAGS_OPTIONAL | VAR_FLAGS_RANGE_CHECK_ASSUME_DEFAULT,
++              CFG_SET_THRESH62_5G_DEFAULT_ETSI,
++              CFG_SET_THRESH62_5G_MIN_ETSI,
++              CFG_SET_THRESH62_5G_MAX_ETSI ),
++
++   REG_VARIABLE( CFG_SET_THRESH62_2G_NAME_ETSI, WLAN_PARAM_Integer,
++              hdd_config_t, thresh62_2g_etsi,
++              VAR_FLAGS_OPTIONAL | VAR_FLAGS_RANGE_CHECK_ASSUME_DEFAULT,
++              CFG_SET_THRESH62_2G_DEFAULT_ETSI,
++              CFG_SET_THRESH62_2G_MIN_ETSI,
++              CFG_SET_THRESH62_2G_MAX_ETSI ),
++#endif
+ };
+ 
+ 
+diff --git a/CORE/HDD/src/wlan_hdd_cfg80211.c b/CORE/HDD/src/wlan_hdd_cfg80211.c
+index 67e9369..2f1a94d 100644
+--- a/CORE/HDD/src/wlan_hdd_cfg80211.c
++++ b/CORE/HDD/src/wlan_hdd_cfg80211.c
+@@ -809,7 +809,7 @@ static struct index_vht_data_rate_type supported_vht_mcs_rate_nss1[] =
+    {6,  {2633, 2925}, {1215, 1350}, {585,  650}},
+    {7,  {2925, 3250}, {1350, 1500}, {650,  722}},
+    {8,  {3510, 3900}, {1620, 1800}, {780,  867}},
+-   {9,  {3900, 4333}, {1800, 2000}, {780,  867}}
++   {9,  {3900, 4333}, {1800, 2000}, {3900,  4333/* no used mcs param */}}
+ };
+ 
+ /*MCS parameters with Nss = 2*/
+@@ -21238,7 +21238,9 @@ static int __wlan_hdd_cfg80211_add_key( struct wiphy *wiphy,
+ 
+         pWextState->roamProfile.Keys.KeyLength[key_index] = (u8)params->key_len;
+ 
++#if 0
+         pWextState->roamProfile.Keys.defaultIndex = key_index;
++#endif
+ 
+ 
+         vos_mem_copy(&pWextState->roamProfile.Keys.KeyMaterial[key_index][0],
+@@ -22096,6 +22098,121 @@ int wlan_hdd_cfg80211_update_bss(struct wiphy *wiphy, hdd_adapter_t *pAdapter)
+     return 0;
+ }
+ 
++struct cfg80211_bss*
++wlan_hdd_cfg80211_update_channel_sw(hdd_adapter_t *pAdapter,
++                                    tSirBssDescription *bss_desc)
++{
++    struct net_device *dev = pAdapter->dev;
++    struct wireless_dev *wdev = dev->ieee80211_ptr;
++    struct wiphy *wiphy = wdev->wiphy;
++    int chan_no = bss_desc->channelId;
++#ifdef WLAN_ENABLE_AGEIE_ON_SCAN_RESULTS
++    qcom_ie_age *qie_age = NULL;
++    int ie_length = GET_IE_LEN_IN_BSS_DESC( bss_desc->length ) + sizeof(qcom_ie_age);
++#else
++    int ie_length = GET_IE_LEN_IN_BSS_DESC( bss_desc->length );
++#endif
++    const char *ie = ((ie_length != 0) ? (const char *)&bss_desc->ieFields: NULL);
++    unsigned int freq;
++    struct ieee80211_channel *chan;
++    struct ieee80211_mgmt *mgmt = NULL;
++#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4,7,0))
++    size_t frame_len = ie_length;
++#else
++    size_t frame_len = ie_length + offsetof(struct ieee80211_mgmt, u.probe_resp.variable);
++#endif
++    int rssi = 0;
++    hdd_context_t *pHddCtx;
++    int status;
++#ifdef CONFIG_CNSS
++    struct timespec ts;
++#endif
++    hdd_config_t *cfg_param = NULL;
++    struct cfg80211_inform_bss data = {0};
++    struct cfg80211_bss *bss = NULL;
++
++    pHddCtx = WLAN_HDD_GET_CTX(pAdapter);
++    status = wlan_hdd_validate_context(pHddCtx);
++    if (0 != status)
++        return NULL;
++
++    cfg_param = pHddCtx->cfg_ini;
++    mgmt = kzalloc((sizeof (struct ieee80211_mgmt) + ie_length), GFP_KERNEL);
++    if (!mgmt) {
++        hddLog(LOGE, FL("memory allocation failed"));
++        return NULL;
++    }
++
++    memcpy(mgmt->bssid, bss_desc->bssId, ETH_ALEN);
++
++#ifdef CONFIG_CNSS
++    vos_get_monotonic_boottime_ts(&ts);
++    mgmt->u.probe_resp.timestamp = ((u64)ts.tv_sec * 1000000) + (ts.tv_nsec / 1000);
++#else
++    memcpy(&mgmt->u.probe_resp.timestamp, bss_desc->timeStamp, sizeof (bss_desc->timeStamp));
++#endif
++
++    mgmt->u.probe_resp.beacon_int = bss_desc->beaconInterval;
++    mgmt->u.probe_resp.capab_info = bss_desc->capabilityInfo;
++
++#ifdef WLAN_ENABLE_AGEIE_ON_SCAN_RESULTS
++    ie_length           -=sizeof(qcom_ie_age);
++    qie_age =  (qcom_ie_age *)(mgmt->u.probe_resp.variable + ie_length);
++    qie_age->element_id = QCOM_VENDOR_IE_ID;
++    qie_age->len        = QCOM_VENDOR_IE_AGE_LEN;
++    qie_age->oui_1      = QCOM_OUI1;
++    qie_age->oui_2      = QCOM_OUI2;
++    qie_age->oui_3      = QCOM_OUI3;
++    qie_age->type       = QCOM_VENDOR_IE_AGE_TYPE;
++    qie_age->age        = (vos_timer_get_system_time() - bss_desc->nReceivedTime)/10;
++    qie_age->tsf_delta  = bss_desc->tsf_delta;
++#endif
++
++    memcpy(mgmt->u.probe_resp.variable, ie, ie_length);
++    if (bss_desc->fProbeRsp)
++         mgmt->frame_control |= (u16)(IEEE80211_FTYPE_MGMT | IEEE80211_STYPE_PROBE_RESP);
++    else
++         mgmt->frame_control |= (u16)(IEEE80211_FTYPE_MGMT | IEEE80211_STYPE_BEACON);
++
++    if (chan_no <= ARRAY_SIZE(hdd_channels_2_4_GHZ) && (wiphy->bands[IEEE80211_BAND_2GHZ] != NULL)) {
++        freq = ieee80211_channel_to_frequency(chan_no, IEEE80211_BAND_2GHZ);
++    }
++    else if ((chan_no > ARRAY_SIZE(hdd_channels_2_4_GHZ)) && (wiphy->bands[IEEE80211_BAND_5GHZ] != NULL)) {
++        freq = ieee80211_channel_to_frequency(chan_no, IEEE80211_BAND_5GHZ);
++    }
++    else {
++        hddLog(LOGE, FL("Invalid chan_no %d"), chan_no);
++        kfree(mgmt);
++        return NULL;
++    }
++#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4,11,0))
++    chan = ieee80211_get_channel(wiphy, freq);
++#else
++    chan = __ieee80211_get_channel(wiphy, freq);
++#endif
++
++    if (chan == NULL) {
++        hddLog(LOGE, FL("chan pointer is NULL, chan_no: %d freq: %d"), chan_no, freq);
++        kfree(mgmt);
++        return NULL;
++    }
++
++    rssi = (cfg_param->inform_bss_rssi_raw) ? bss_desc->rssi_raw : bss_desc->rssi;
++    rssi = (VOS_MIN(rssi, 0)) * 100;
++
++    hddLog(LOG1, "BSSID: "MAC_ADDRESS_STR" Channel:%u RSSI:%d",
++           MAC_ADDR_ARRAY(mgmt->bssid), vos_freq_to_chan(chan->center_freq), (int)(rssi/100));
++
++    data.chan = chan;
++    data.boottime_ns = bss_desc->scansystimensec;
++    data.signal = rssi;
++
++    bss = cfg80211_channel_switch_update_channel(wiphy, &data, mgmt,
++                                                 frame_len, GFP_KERNEL);
++    kfree(mgmt);
++    return bss;
++}
++
+ #define dump_pmkid(pMac, pmkid) \
+ { \
+     hddLog(LOG1, "PMKSA-ID: %02X:%02X:%02X:%02X:%02X:%02X:%02X:%02X:%02X:%02X:%02X:%02X:%02X:%02X:%02X:%02X", \
+@@ -27337,7 +27454,12 @@ static int __wlan_hdd_cfg80211_get_station(struct wiphy *wiphy,
+     rate_flags = pAdapter->hdd_stats.ClassA_stat.tx_rate_flags;
+ 
+     //convert to the UI units of 100kbps
++#ifdef NO_SILEX_CHANGE
+     myRate = pAdapter->hdd_stats.ClassA_stat.tx_rate * 5;
++#else
++    /* avoid the rounding */
++    myRate = pAdapter->hdd_stats.ClassA_stat.tx_rate * 1;
++#endif /* NO_SILEX_CHANGE */
+     if (!(rate_flags & eHAL_TX_RATE_LEGACY)) {
+         nss = pAdapter->hdd_stats.ClassA_stat.rx_frag_cnt;
+ 
+@@ -27691,7 +27813,11 @@ static int __wlan_hdd_cfg80211_get_station(struct wiphy *wiphy,
+ #endif
+                 }
+             }
++#ifndef NO_SILEX_CHANGE
++            if (rate_flags & eHAL_TX_RATE_SGI_BY_SILEX)
++#else
+             if (rate_flags & eHAL_TX_RATE_SGI)
++#endif
+             {
+                 if (!(sinfo->txrate.flags & RATE_INFO_FLAGS_VHT_MCS))
+                     sinfo->txrate.flags |= RATE_INFO_FLAGS_MCS;
+@@ -27738,6 +27864,14 @@ static int __wlan_hdd_cfg80211_get_station(struct wiphy *wiphy,
+                 sinfo->txrate.bw = RATE_INFO_BW_40;
+ #else
+                 sinfo->txrate.flags |= RATE_INFO_FLAGS_40_MHZ_WIDTH;
++#endif
++            }
++            else if (rate_flags & eHAL_TX_RATE_VHT20)
++            {
++#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 0, 0))
++                sinfo->txrate.bw = RATE_INFO_BW_20;
++#else
++                sinfo->txrate.flags |= RATE_INFO_FLAGS_20_MHZ_WIDTH;
+ #endif
+             }
+ #endif /* WLAN_FEATURE_11AC */
+@@ -27752,10 +27886,22 @@ static int __wlan_hdd_cfg80211_get_station(struct wiphy *wiphy,
+                     sinfo->txrate.flags |= RATE_INFO_FLAGS_40_MHZ_WIDTH;
+ #endif
+                 }
++                else if (rate_flags & eHAL_TX_RATE_HT20)
++                {
++#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 0, 0))
++                    sinfo->txrate.bw = RATE_INFO_BW_20;
++#endif
++                }
++
+             }
++#ifndef NO_SILEX_CHANGE
++            if (rate_flags & eHAL_TX_RATE_SGI_BY_SILEX)
++#else
+             if (rate_flags & eHAL_TX_RATE_SGI)
++#endif
+             {
+-                sinfo->txrate.flags |= RATE_INFO_FLAGS_MCS;
++                if (!(sinfo->txrate.flags & RATE_INFO_FLAGS_VHT_MCS))
++                    sinfo->txrate.flags |= RATE_INFO_FLAGS_MCS;
+                 sinfo->txrate.flags |= RATE_INFO_FLAGS_SHORT_GI;
+             }
+ #ifdef LINKSPEED_DEBUG_ENABLED
+@@ -27769,11 +27915,15 @@ static int __wlan_hdd_cfg80211_get_station(struct wiphy *wiphy,
+ 
+     sinfo->tx_bytes = pAdapter->stats.tx_bytes;
+ 
++#ifndef NO_SILEX_CHANGED
++    sinfo->tx_packets = pAdapter->stats.tx_packets;
++#else
+     sinfo->tx_packets =
+        pAdapter->hdd_stats.summary_stat.tx_frm_cnt[0] +
+        pAdapter->hdd_stats.summary_stat.tx_frm_cnt[1] +
+        pAdapter->hdd_stats.summary_stat.tx_frm_cnt[2] +
+        pAdapter->hdd_stats.summary_stat.tx_frm_cnt[3];
++#endif /* NO_SILEX_CHANGED */
+ 
+     sinfo->tx_retries =
+        pAdapter->hdd_stats.summary_stat.multiple_retry_cnt[0] +
+@@ -28003,6 +28153,37 @@ static int wlan_hdd_cfg80211_set_power_mgmt(struct wiphy *wiphy,
+     return ret;
+ }
+ 
++static int __wlan_hdd_cfg80211_get_power_mgmt(struct wiphy *wiphy,
++                     struct net_device *dev, bool *mode, int timeout)
++{
++    hdd_adapter_t *pAdapter = WLAN_HDD_GET_PRIV_PTR(dev);
++    hdd_context_t *pHddCtx;
++    VOS_STATUS vos_status;
++    int status;
++    ENTER();
++    pHddCtx = WLAN_HDD_GET_CTX(pAdapter);
++    status = wlan_hdd_validate_context(pHddCtx);
++    if (0 != status)
++    {
++        VOS_TRACE( VOS_MODULE_ID_HDD, VOS_TRACE_LEVEL_ERROR,
++                   "%s: HDD context is not valid", __func__);
++        return status;
++    }
++    vos_status =  wlan_hdd_get_powersave(pAdapter, mode);
++    EXIT();
++    return 1;
++}
++
++static int wlan_hdd_cfg80211_get_power_mgmt(struct wiphy *wiphy,
++                     struct net_device *dev, bool *mode, int timeout)
++{
++    int ret;
++    vos_ssr_protect(__func__);
++    ret = __wlan_hdd_cfg80211_get_power_mgmt(wiphy, dev, mode, timeout);
++    vos_ssr_unprotect(__func__);
++    return ret;
++}
++
+ /**
+  * __wlan_hdd_set_default_mgmt_key() - set default mgmt key
+  * @wiphy: pointer to wiphy
+@@ -33444,6 +33625,28 @@ static void wlan_hdd_cfg80211_abort_scan(struct wiphy *wiphy,
+ }
+ #endif
+ 
++#if 1 /* silex add for test */
++static void __wlan_hdd_cfg80211_bangradar(struct wiphy *wiphy,
++                                           struct net_device *dev)
++{
++	int set_value = 1;
++	hdd_adapter_t *pAdapter = WLAN_HDD_GET_PRIV_PTR(dev);
++
++	process_wma_set_command((int)pAdapter->sessionId,
++								(int)WMI_PDEV_PARAM_BANGRADAR,
++								(int)set_value, DBG_CMD);
++
++	return;
++}
++
++static void wlan_hdd_cfg80211_bangradar(struct wiphy *wiphy,
++				struct net_device *dev)
++{
++	vos_ssr_protect(__func__);
++	__wlan_hdd_cfg80211_bangradar(wiphy, dev);
++	vos_ssr_unprotect(__func__);
++}
++#endif
+ /* cfg80211_ops */
+ static struct cfg80211_ops wlan_hdd_cfg80211_ops =
+ {
+@@ -33489,6 +33692,7 @@ static struct cfg80211_ops wlan_hdd_cfg80211_ops =
+      .dump_station = wlan_hdd_cfg80211_dump_station,
+      .get_station = wlan_hdd_cfg80211_get_station,
+      .set_power_mgmt = wlan_hdd_cfg80211_set_power_mgmt,
++     .get_power_mgmt = wlan_hdd_cfg80211_get_power_mgmt,
+      .del_station = wlan_hdd_cfg80211_del_station,
+      .add_station = wlan_hdd_cfg80211_add_station,
+ #ifdef FEATURE_WLAN_LFR
+@@ -33534,4 +33738,5 @@ static struct cfg80211_ops wlan_hdd_cfg80211_ops =
+     defined(CFG80211_EXTERNAL_AUTH_SUPPORT)
+     .external_auth = wlan_hdd_cfg80211_external_auth,
+ #endif
++	.bangradar = wlan_hdd_cfg80211_bangradar,
+ };
+diff --git a/CORE/HDD/src/wlan_hdd_hostapd.c b/CORE/HDD/src/wlan_hdd_hostapd.c
+index 60a6387..3bbb505 100644
+--- a/CORE/HDD/src/wlan_hdd_hostapd.c
++++ b/CORE/HDD/src/wlan_hdd_hostapd.c
+@@ -2539,7 +2539,7 @@ VOS_STATUS hdd_hostapd_SAPEventCB( tpSap_Event pSapEvent, v_PVOID_t usrDataForCa
+                        FL("Sent CAC start to user space"));
+             }
+             pHddCtx->dfs_radar_found = VOS_FALSE;
+-            break;
++            return VOS_STATUS_SUCCESS;
+ 
+         case eSAP_DFS_CAC_INTERRUPTED:
+             /*
+@@ -2559,7 +2559,7 @@ VOS_STATUS hdd_hostapd_SAPEventCB( tpSap_Event pSapEvent, v_PVOID_t usrDataForCa
+                 hddLog(VOS_TRACE_LEVEL_INFO,
+                     FL("Sent CAC end (interrupted) to user space"));
+             }
+-            break;
++            return VOS_STATUS_SUCCESS;
+ 
+         case eSAP_DFS_CAC_END:
+             wlan_hdd_send_svc_nlink_msg(pHddCtx->radio_index,
+@@ -2576,7 +2576,7 @@ VOS_STATUS hdd_hostapd_SAPEventCB( tpSap_Event pSapEvent, v_PVOID_t usrDataForCa
+                 hddLog(VOS_TRACE_LEVEL_INFO,
+                        FL("Sent CAC end to user space"));
+             }
+-            break;
++            return VOS_STATUS_SUCCESS;
+ 
+         case eSAP_DFS_RADAR_DETECT:
+             wlan_hdd_send_svc_nlink_msg(pHddCtx->radio_index,
+@@ -2592,14 +2592,14 @@ VOS_STATUS hdd_hostapd_SAPEventCB( tpSap_Event pSapEvent, v_PVOID_t usrDataForCa
+                 hddLog(VOS_TRACE_LEVEL_INFO,
+                        FL("Sent radar detected to user space"));
+             }
+-            break;
++            return VOS_STATUS_SUCCESS;
+ 
+         case eSAP_DFS_NO_AVAILABLE_CHANNEL:
+             wlan_hdd_send_svc_nlink_msg(pHddCtx->radio_index,
+                                         WLAN_SVC_DFS_ALL_CHANNEL_UNAVAIL_IND,
+                                         &dfs_info,
+                                         sizeof(dfs_info));
+-            break;
++            return VOS_STATUS_SUCCESS;
+ 
+         case eSAP_STA_SET_KEY_EVENT:
+             /* TODO: forward the message to hostapd once implementation
+@@ -4831,7 +4831,6 @@ static __iw_softap_setparam(struct net_device *dev,
+                 ret = wlan_hdd_multicast_del_group(pHostapdAdapter,set_value);
+                 break;
+ #endif
+-
+         default:
+             hddLog(LOGE, FL("Invalid setparam command %d value %d"),
+                     sub_cmd, set_value);
+diff --git a/CORE/HDD/src/wlan_hdd_main.c b/CORE/HDD/src/wlan_hdd_main.c
+old mode 100644
+new mode 100755
+index 969b55c..09516d5
+--- a/CORE/HDD/src/wlan_hdd_main.c
++++ b/CORE/HDD/src/wlan_hdd_main.c
+@@ -1804,6 +1804,12 @@ hdd_parse_get_ibss_peer_info(tANI_U8 *pValue, v_MACADDR_t *pPeerMacAddr)
+     return VOS_STATUS_SUCCESS;
+ }
+ 
++static void hdd_set_dfs_csr_block_tx(hdd_context_t *pHddCtx, bool val)
++{
++    hddLog(LOG1, FL("val =%d"), val);
++    pHddCtx->dfs_csr_block_tx = val;
++}
++
+ #ifdef IPA_UC_STA_OFFLOAD
+ static void hdd_set_thermal_level_cb(hdd_context_t *pHddCtx, u_int8_t level)
+ {
+@@ -12027,6 +12033,175 @@ uint32_t hdd_get_current_vdev_sta_count(hdd_context_t *hdd_ctx)
+ 	return vdev_sta_cnt;
+ }
+ 
++#if 0 /* silex : not used, because now set dtim policy in WMA.*/
++void wlan_hdd_set_dtim_policy(hdd_context_t *pHddCtx)
++{
++    int ret = 0;
++    vos_msg_t msg = {0};
++
++    msg.type = WDA_WLAN_DTIM_POLICY;
++    msg.reserved = 0;
++    msg.bodyptr = NULL;
++
++    if (VOS_STATUS_SUCCESS != vos_mq_post_message(VOS_MODULE_ID_WDA, &msg)) {
++       VOS_TRACE(VOS_MODULE_ID_HDD, VOS_TRACE_LEVEL_ERROR, "%s: "
++                 "Not able to post wda_cli_set_cmd message to WDA",
++                 __func__);
++       ret = -EIO;
++    }
++
++    return;
++}
++#endif
++
++#if 1
++static int check_country_code_etsi(hdd_context_t *pHddCtx)
++{
++    if(!strncmp(pHddCtx->reg.alpha2, "DE", 2) ||
++       !strncmp(pHddCtx->reg.alpha2, "RS", 2) ||
++       !strncmp(pHddCtx->reg.alpha2, "TR", 2) ||
++       !strncmp(pHddCtx->reg.alpha2, "00", 2)) {
++        return 1;
++    }
++    return 0;
++}
++
++void wlan_hdd_set_nflimit(hdd_context_t *pHddCtx)
++{
++    int ret = 0;
++    vos_msg_t msg = {0};
++    int is_etsi_country = 0;
++
++    is_etsi_country = check_country_code_etsi(pHddCtx);
++
++    if (pHddCtx->cfg_ini->nflimit_max2g || (is_etsi_country && pHddCtx->cfg_ini->nflimit_max2g_etsi)) {
++        wmi_nflimit_cmd_fixed_param *param1 = (wmi_nflimit_cmd_fixed_param *)vos_mem_malloc(
++                                sizeof(wmi_nflimit_cmd_fixed_param));
++        if (NULL == param1) {
++           hddLog(VOS_TRACE_LEVEL_FATAL, "%s: vos_mem_alloc failed", __func__);
++           return;
++        }
++        vos_mem_zero((void *)param1, sizeof(wmi_nflimit_cmd_fixed_param));
++        if(is_etsi_country) {
++            param1->nflimit_max = (-1 * pHddCtx->cfg_ini->nflimit_max2g_etsi);
++        }
++        else
++        {
++            param1->nflimit_max = (-1 * pHddCtx->cfg_ini->nflimit_max2g);
++        }
++        param1->is2GHz= 1;
++        msg.type = WDA_NFLIMIT_SET_CMD;
++        msg.reserved = 0;
++        msg.bodyptr = (void *)param1;
++        if (VOS_STATUS_SUCCESS != vos_mq_post_message(VOS_MODULE_ID_WDA,
++                                                      &msg)) {
++           VOS_TRACE(VOS_MODULE_ID_HDD, VOS_TRACE_LEVEL_ERROR, "%s: "
++                     "Not able to post wda_cli_set_cmd message to WDA",
++                     __func__);
++           vos_mem_free(param1);
++           ret = -EIO;
++        }
++    }
++    if (pHddCtx->cfg_ini->nflimit_max5g || (is_etsi_country && pHddCtx->cfg_ini->nflimit_max5g_etsi)) {
++        wmi_nflimit_cmd_fixed_param *param2 = (wmi_nflimit_cmd_fixed_param *)vos_mem_malloc(
++                                sizeof(wmi_nflimit_cmd_fixed_param));
++        if (NULL == param2) {
++           hddLog(VOS_TRACE_LEVEL_FATAL, "%s: vos_mem_alloc failed", __func__);
++           return;
++        }
++        vos_mem_zero((void *)param2, sizeof(wmi_nflimit_cmd_fixed_param));
++        if(is_etsi_country) {
++            param2->nflimit_max = (-1 * pHddCtx->cfg_ini->nflimit_max5g_etsi);
++        }
++        else
++        {
++            param2->nflimit_max = (-1 * pHddCtx->cfg_ini->nflimit_max5g);
++        }
++        param2->is2GHz= 0;
++        msg.type = WDA_NFLIMIT_SET_CMD;
++        msg.reserved = 0;
++        msg.bodyptr = (void *)param2;
++        if (VOS_STATUS_SUCCESS != vos_mq_post_message(VOS_MODULE_ID_WDA,
++                                                      &msg)) {
++           VOS_TRACE(VOS_MODULE_ID_HDD, VOS_TRACE_LEVEL_ERROR, "%s: "
++                     "Not able to post wda_cli_set_cmd message to WDA",
++                     __func__);
++           vos_mem_free(param2);
++           ret = -EIO;
++        }
++    }
++    return;
++}
++
++void wlan_hdd_set_thresh62(hdd_context_t *pHddCtx)
++{
++    int ret = 0;
++    vos_msg_t msg = {0};
++    int is_etsi_country = 0;
++
++    is_etsi_country = check_country_code_etsi(pHddCtx);
++
++    if (pHddCtx->cfg_ini->thresh62_2g  || (is_etsi_country && pHddCtx->cfg_ini->thresh62_2g_etsi)) {
++        wmi_thresh62_fixed_param *param1 = (wmi_thresh62_fixed_param *)vos_mem_malloc(
++                                sizeof(wmi_thresh62_fixed_param));
++        if (NULL == param1) {
++           hddLog(VOS_TRACE_LEVEL_FATAL, "%s: vos_mem_alloc failed", __func__);
++           return;
++        }
++        vos_mem_zero((void *)param1, sizeof(wmi_thresh62_fixed_param));
++        if(is_etsi_country) {
++            param1->thresh62_val = pHddCtx->cfg_ini->thresh62_2g_etsi;
++        }
++        else
++        {
++            param1->thresh62_val = pHddCtx->cfg_ini->thresh62_2g;
++        }
++        param1->is2GHz= 1;
++        msg.type = WDA_SET_THRESH62_CMD;
++        msg.reserved = 0;
++        msg.bodyptr = (void *)param1;
++        if (VOS_STATUS_SUCCESS != vos_mq_post_message(VOS_MODULE_ID_WDA,
++                                                      &msg)) {
++           VOS_TRACE(VOS_MODULE_ID_HDD, VOS_TRACE_LEVEL_ERROR, "%s: "
++                     "Not able to post wda_cli_set_cmd message to WDA",
++                     __func__);
++           vos_mem_free(param1);
++           ret = -EIO;
++        }
++    }
++    if (pHddCtx->cfg_ini->thresh62_5g || (is_etsi_country && pHddCtx->cfg_ini->thresh62_5g_etsi)) {
++        wmi_thresh62_fixed_param *param2 = (wmi_thresh62_fixed_param *)vos_mem_malloc(
++                                sizeof(wmi_thresh62_fixed_param));
++        if (NULL == param2) {
++           hddLog(VOS_TRACE_LEVEL_FATAL, "%s: vos_mem_alloc failed", __func__);
++           return;
++        }
++        vos_mem_zero((void *)param2, sizeof(wmi_thresh62_fixed_param));
++        if(is_etsi_country) {
++            param2->thresh62_val = pHddCtx->cfg_ini->thresh62_5g_etsi;
++        }
++        else
++        {
++            param2->thresh62_val = pHddCtx->cfg_ini->thresh62_5g;
++        }
++        param2->is2GHz= 0;
++        msg.type = WDA_SET_THRESH62_CMD;
++        msg.reserved = 0;
++        msg.bodyptr = (void *)param2;
++        if (VOS_STATUS_SUCCESS != vos_mq_post_message(VOS_MODULE_ID_WDA,
++                                                      &msg)) {
++           VOS_TRACE(VOS_MODULE_ID_HDD, VOS_TRACE_LEVEL_ERROR, "%s: "
++                     "Not able to post wda_cli_set_cmd message to WDA",
++                     __func__);
++           vos_mem_free(param2);
++           ret = -EIO;
++        }
++    }
++    return;
++}
++#endif
++
++
+ hdd_adapter_t *hdd_open_adapter(hdd_context_t *hdd_ctx,
+ 				uint8_t session_type,
+ 				const char *iface_name,
+@@ -12410,6 +12585,11 @@ hdd_adapter_t *hdd_open_adapter(hdd_context_t *hdd_ctx,
+ 	}
+ #endif
+ 
++#if 1
++      wlan_hdd_set_nflimit(hdd_ctx);
++      wlan_hdd_set_thresh62(hdd_ctx);
++#endif
++
+ 	if ((vos_get_conparam() != VOS_FTM_MODE) &&
+ 	    (!hdd_ctx->cfg_ini->enable2x2)) {
+ #define HDD_DTIM_1CHAIN_RX_ID 0x5
+@@ -17984,6 +18164,9 @@ int hdd_wlan_startup(struct device *dev, v_VOID_t *hif_sc)
+                "%s: Error while initializing Runtime DPD Recaliberation information", __func__);
+    }
+ 
++   sme_set_dfs_csr_callback(pHddCtx->hHal,
++                      (tSmeSetCsrBlockTxCallback)hdd_set_dfs_csr_block_tx);
++
+    /* Plug in set thermal level callback */
+    sme_add_set_thermal_level_callback(pHddCtx->hHal,
+                      (tSmeSetThermalLevelCallback)hdd_set_thermal_level_cb);
+diff --git a/CORE/HDD/src/wlan_hdd_nan_datapath.c b/CORE/HDD/src/wlan_hdd_nan_datapath.c
+index 52dc57b..79e2f35 100644
+--- a/CORE/HDD/src/wlan_hdd_nan_datapath.c
++++ b/CORE/HDD/src/wlan_hdd_nan_datapath.c
+@@ -960,6 +960,7 @@ static void hdd_ndp_iface_create_rsp_handler(hdd_adapter_t *adapter,
+ 	roam_info = vos_mem_malloc(sizeof(*roam_info));
+ 	if (!roam_info)
+ 		goto nla_put_failure;
++	vos_mem_zero(roam_info, sizeof(*roam_info));
+ 
+ 	sta_ctx->broadcast_staid = ndi_rsp->sta_id;
+ 	hdd_save_peer(sta_ctx, sta_ctx->broadcast_staid, &bc_mac_addr);
+@@ -1270,6 +1271,8 @@ static void hdd_ndp_new_peer_ind_handler(hdd_adapter_t *adapter,
+ 	roam_info = vos_mem_malloc(sizeof(*roam_info));
+ 	if (!roam_info)
+ 		return;
++	vos_mem_zero(roam_info, sizeof(*roam_info));
++
+ 	/* this function is called for each new peer */
+ 	ndp_ctx->active_ndp_peers++;
+ 	hddLog(LOG1, FL("vdev_id: %d, num_peers: %d"),
+diff --git a/CORE/HDD/src/wlan_hdd_tx_rx.c b/CORE/HDD/src/wlan_hdd_tx_rx.c
+index 5fa42f6..e08ced8 100644
+--- a/CORE/HDD/src/wlan_hdd_tx_rx.c
++++ b/CORE/HDD/src/wlan_hdd_tx_rx.c
+@@ -517,6 +517,11 @@ int __hdd_hard_start_xmit(struct sk_buff *skb, struct net_device *dev)
+        goto drop_list;
+    }
+ 
++   if (hddCtxt->dfs_csr_block_tx) {
++        hddLog(LOGW, FL("dfs channel swich inprogress,drop"));
++        goto drop_list;
++   }
++
+    while (skb) {
+        skb_next = skb->next;
+        /* memset skb control block */
+@@ -1471,6 +1476,7 @@ VOS_STATUS hdd_rx_packet_cbk(v_VOID_t *vosContext,
+    while (NULL != skb) {
+       skb_next = skb->next;
+ 
++#if 0
+       if (((pHddStaCtx->conn_info.proxyARPService) &&
+          cfg80211_is_gratuitous_arp_unsolicited_na(skb)) ||
+          vos_is_load_unload_in_progress(VOS_MODULE_ID_VOSS, NULL)) {
+@@ -1483,6 +1489,7 @@ VOS_STATUS hdd_rx_packet_cbk(v_VOID_t *vosContext,
+             skb = skb_next;
+             continue;
+       }
++#endif
+ 
+       DPTRACE(adf_dp_trace(skb,
+               ADF_DP_TRACE_RX_HDD_PACKET_PTR_RECORD,
+@@ -1527,6 +1534,7 @@ VOS_STATUS hdd_rx_packet_cbk(v_VOID_t *vosContext,
+ #endif /* QCA_PKT_PROTO_TRACE */
+ 
+       skb->dev = pAdapter->dev;
++      pAdapter->stats.rx_bytes += skb->len;
+       skb->protocol = eth_type_trans(skb, skb->dev);
+ 
+       /* Check & drop mcast packets (for IPV6) as required */
+@@ -1544,7 +1552,6 @@ VOS_STATUS hdd_rx_packet_cbk(v_VOID_t *vosContext,
+ 
+       ++pAdapter->hdd_stats.hddTxRxStats.rxPackets[cpu_index];
+       ++pAdapter->stats.rx_packets;
+-      pAdapter->stats.rx_bytes += skb->len;
+ 
+       /**
+        * Remove SKB from internal tracking table before submitting it
+diff --git a/CORE/HDD/src/wlan_hdd_wext.c b/CORE/HDD/src/wlan_hdd_wext.c
+index 6dad136..be242ee 100644
+--- a/CORE/HDD/src/wlan_hdd_wext.c
++++ b/CORE/HDD/src/wlan_hdd_wext.c
+@@ -4182,9 +4182,36 @@ VOS_STATUS  wlan_hdd_set_powersave(hdd_adapter_t *pAdapter, int mode)
+        }
+    }
+ 
++#if 1
++/* save ps mode for reconnction by silex */
++   pHddCtx->cfg_ini->ps_usr_setting = mode;
++#endif
++
+    return VOS_STATUS_SUCCESS;
+ }
+ 
++VOS_STATUS  wlan_hdd_get_powersave(hdd_adapter_t *pAdapter, bool *mode)
++{
++    tpAniSirGlobal pMac;
++    tpPsOffloadPerSessionInfo pmc;
++    if (NULL == pAdapter)
++    {
++       hddLog(VOS_TRACE_LEVEL_FATAL, "Adapter NULL");
++       return VOS_STATUS_E_FAULT;
++    }
++
++    pMac = PMAC_STRUCT( WLAN_HDD_GET_HAL_CTX(pAdapter) );
++    pmc = &pMac->pmcOffloadInfo.pmc[pAdapter->sessionId];
++
++    if(pmc->configStaPsEnabled == FALSE)
++       *mode = false;
++    else
++       *mode = true;
++
++
++    return VOS_STATUS_SUCCESS;
++}
++
+ VOS_STATUS wlan_hdd_exit_lowpower(hdd_context_t *pHddCtx,
+                                        hdd_adapter_t *pAdapter)
+ {
+diff --git a/CORE/HDD/src/wlan_hdd_wowl.c b/CORE/HDD/src/wlan_hdd_wowl.c
+index 50926d8..ee7faa7 100644
+--- a/CORE/HDD/src/wlan_hdd_wowl.c
++++ b/CORE/HDD/src/wlan_hdd_wowl.c
+@@ -608,6 +608,8 @@ v_BOOL_t hdd_init_wowl (hdd_adapter_t*pAdapter)
+   pHddCtx = pAdapter->pHddCtx;
+ 
+   memset(g_hdd_wowl_ptrns, 0, sizeof(g_hdd_wowl_ptrns));
++  if (pAdapter->device_mode == WLAN_HDD_P2P_DEVICE)
++    return VOS_TRUE;/* WOW is not needed for P2P_DEVICE. it does not make connection by self. */
+ 
+   //Add any statically configured patterns
+   hdd_add_wowl_ptrn(pAdapter, pHddCtx->cfg_ini->wowlPattern);
+diff --git a/CORE/MAC/inc/aniGlobal.h b/CORE/MAC/inc/aniGlobal.h
+old mode 100644
+new mode 100755
+index 2d725fe..21aa0eb
+--- a/CORE/MAC/inc/aniGlobal.h
++++ b/CORE/MAC/inc/aniGlobal.h
+@@ -1129,6 +1129,8 @@ typedef struct sMacOpenParameters
+     tANI_U32 ucTxPartitionBase;
+ #endif /* IPA_UC_OFFLOAD */
+ 
++    tANI_U8 staDTIMPolicy;
++
+     bool      tx_chain_mask_cck;
+     uint16_t  self_gen_frm_pwr;
+ #ifdef WLAN_FEATURE_LPSS
+diff --git a/CORE/MAC/inc/qwlan_version.h b/CORE/MAC/inc/qwlan_version.h
+index aefb634..a5431b6 100644
+--- a/CORE/MAC/inc/qwlan_version.h
++++ b/CORE/MAC/inc/qwlan_version.h
+@@ -44,7 +44,7 @@ BRIEF DESCRIPTION:
+ #define QWLAN_VERSION_EXTRA            ""
+ #define QWLAN_VERSION_BUILD            38
+ 
+-#define QWLAN_VERSIONSTR               "4.5.25.38"
++#define QWLAN_VERSIONSTR               "4.5.25.38 sxa 1.0.0.a19"
+ 
+ 
+ #define AR6320_REV1_VERSION             0x5000000
+diff --git a/CORE/MAC/inc/sirApi.h b/CORE/MAC/inc/sirApi.h
+index 2b108d4..694f382 100644
+--- a/CORE/MAC/inc/sirApi.h
++++ b/CORE/MAC/inc/sirApi.h
+@@ -2495,7 +2495,11 @@ typedef enum eTxRateInfo
+    eHAL_TX_RATE_HT20   = 0x2,    /* HT20 rates */
+    eHAL_TX_RATE_HT40   = 0x4,    /* HT40 rates */
+    eHAL_TX_RATE_SGI    = 0x8,    /* Rate with Short guard interval */
++#ifndef NO_SILEX_CHANGE
++   eHAL_TX_RATE_SGI_BY_SILEX    = 0x10,   /* Rate with Short guard interval. this flag is set by silex */
++#else
+    eHAL_TX_RATE_LGI    = 0x10,   /* Rate with Long guard interval */
++#endif
+    eHAL_TX_RATE_VHT20  = 0x20,   /* VHT 20 rates */
+    eHAL_TX_RATE_VHT40  = 0x40,   /* VHT 40 rates */
+    eHAL_TX_RATE_VHT80  = 0x80    /* VHT 80 rates */
+diff --git a/CORE/MAC/inc/wni_cfg.h b/CORE/MAC/inc/wni_cfg.h
+index 5831998..00effb6 100644
+--- a/CORE/MAC/inc/wni_cfg.h
++++ b/CORE/MAC/inc/wni_cfg.h
+@@ -367,6 +367,9 @@ enum {
+ #define WNI_CFG_EXTENDED_OPERATIONAL_RATE_SET_LEN    8
+ #define WNI_CFG_PROPRIETARY_OPERATIONAL_RATE_SET_LEN    4
+ #define WNI_CFG_VALID_CHANNEL_LIST_LEN    100
++#ifndef NO_SILEX_CHANGE
++#define WNI_CFG_VALID_CHANNEL_LIST_LEN_FOR_QCOM_CFG_INI 118
++#endif /* NO_SILEX_CHANGE */
+ #define WNI_CFG_MANUFACTURER_OUI_LEN    3
+ #define WNI_CFG_MANUFACTURER_NAME_LEN    64
+ #define WNI_CFG_MODEL_NUMBER_LEN    32
+diff --git a/CORE/MAC/src/include/sirParams.h b/CORE/MAC/src/include/sirParams.h
+old mode 100644
+new mode 100755
+index a5d5332..91e99a2
+--- a/CORE/MAC/src/include/sirParams.h
++++ b/CORE/MAC/src/include/sirParams.h
+@@ -829,6 +829,11 @@ struct sir_mgmt_msg {
+ #define SIR_HAL_ADD_MULTICAST_GROUP       (SIR_HAL_ITC_MSG_TYPES_BEGIN + 388)
+ #define SIR_HAL_SET_MULTICAST_RATE            (SIR_HAL_ITC_MSG_TYPES_BEGIN + 389)
+ #endif
++#if 1 /* silex */
++#define SIR_HAL_WLAN_DTIM_POLICY           (SIR_HAL_ITC_MSG_TYPES_BEGIN + 390)
++#define SIR_HAL_NFLIMIT_SET_CMD            (SIR_HAL_ITC_MSG_TYPES_BEGIN + 391)
++#define SIR_HAL_SET_THRESH62_CMD           (SIR_HAL_ITC_MSG_TYPES_BEGIN + 392)
++#endif
+ #define SIR_HAL_MSG_TYPES_END               (SIR_HAL_MSG_TYPES_BEGIN + 0x1FF)
+ 
+ // CFG message types
+diff --git a/CORE/MAC/src/pe/lim/limAssocUtils.c b/CORE/MAC/src/pe/lim/limAssocUtils.c
+old mode 100644
+new mode 100755
+index 6eb7f8c..25329d0
+--- a/CORE/MAC/src/pe/lim/limAssocUtils.c
++++ b/CORE/MAC/src/pe/lim/limAssocUtils.c
+@@ -3949,11 +3949,13 @@ tSirRetStatus limStaSendAddBss( tpAniSirGlobal pMac, tpSirAssocRsp pAssocRsp,
+     if (psessionEntry->vhtCapability && ( pAssocRsp->VHTCaps.present ))
+     {
+         pAddBssParams->vhtCapable = pAssocRsp->VHTCaps.present;
++#if 0 /* silex : currentExtChannel is set later by lim_update_vhtcaps_assoc_resp */
+         pAddBssParams->currentExtChannel = limGet11ACPhyCBState ( pMac,
+                                                                   pAddBssParams->currentOperChannel,
+                                                                   pAddBssParams->currentExtChannel,
+                                                                   psessionEntry->apCenterChan,
+                                                                   psessionEntry);
++#endif
+         vht_caps =  &pAssocRsp->VHTCaps;
+         vht_oper = &pAssocRsp->VHTOperation;
+     } else if (psessionEntry->vhtCapability &&
+diff --git a/CORE/MAC/src/pe/lim/limProcessAssocRspFrame.c b/CORE/MAC/src/pe/lim/limProcessAssocRspFrame.c
+index f2eb391..c157fb3 100644
+--- a/CORE/MAC/src/pe/lim/limProcessAssocRspFrame.c
++++ b/CORE/MAC/src/pe/lim/limProcessAssocRspFrame.c
+@@ -1028,6 +1028,55 @@ limProcessAssocRspFrame(tpAniSirGlobal pMac, tANI_U8 *pRxPacketInfo, tANI_U8 sub
+         else
+             psessionEntry->beaconParams.fShortPreamble = true;
+     }
++
++    /* Check the Association Req/Rsp ChannelWidth of HT */
++    if (pAssocRsp->HTCaps.present)
++    {
++        if(pAssocRsp->HTCaps.supportedChannelWidthSet !=  pBeaconStruct->HTCaps.supportedChannelWidthSet)
++        {
++            if (!(psessionEntry->htSupportedChannelWidthSet== eHT_CHANNEL_WIDTH_20MHZ) &&
++                (pAssocRsp->HTCaps.supportedChannelWidthSet != psessionEntry->htSupportedChannelWidthSet))
++            {
++                /* silex modified
++                 * Send advisory Disassociation frame to AP
++                 * Re/Association response was received
++                 * with mismatch ht information
++                 */
++                PELOGE(limLog(pMac, LOGE, FL("received Re/AssocRsp frame with mismatch ht information"
++                              " disassoc sta %p"),pHdr->sa);)
++
++                mlmAssocCnf.resultCode = eSIR_SME_INVALID_ASSOC_RSP_RXED;
++                mlmAssocCnf.protStatusCode = eSIR_MAC_UNSPEC_FAILURE_STATUS;
++                limSendDisassocMgmtFrame(pMac, eSIR_MAC_UNSPEC_FAILURE_REASON,
++                                         pHdr->sa, psessionEntry, FALSE);
++
++                goto assocReject;
++            }
++        }
++    }
++
++   /* Check the Association Req/Rsp ChannelWidth of VHT*/
++   if ( pAssocRsp->VHTOperation.present )
++   {
++       if(pAssocRsp->VHTOperation.chanWidth != pBeaconStruct->VHTOperation.chanWidth)
++       {
++           /* Send advisory Disassociation frame to AP
++            * Re/Association response was received
++            * with mismatch Channel Width of vht.
++            */
++           PELOGE(limLog(pMac, LOGE, FL("received Re/AssocRsp frame with mismatch CW information of vh"
++                                        " disassoc sta %p"), pHdr->sa);)
++           mlmAssocCnf.resultCode = eSIR_SME_INVALID_ASSOC_RSP_RXED;
++           mlmAssocCnf.protStatusCode = eSIR_MAC_UNSPEC_FAILURE_STATUS;
++
++           // Send advisory Disassociation frame to AP
++           limSendDisassocMgmtFrame(pMac, eSIR_MAC_UNSPEC_FAILURE_REASON,
++                                    pHdr->sa, psessionEntry, FALSE);
++
++           goto assocReject;
++       }
++   }
++
+ #ifdef FEATURE_WLAN_DIAG_SUPPORT
+     limDiagEventReport(pMac, WLAN_PE_DIAG_CONNECTED, psessionEntry,
+                        eSIR_SUCCESS, eSIR_SUCCESS);
+diff --git a/CORE/MAC/src/pe/lim/limProcessMessageQueue.c b/CORE/MAC/src/pe/lim/limProcessMessageQueue.c
+index 85af3ab..fe0149c 100644
+--- a/CORE/MAC/src/pe/lim/limProcessMessageQueue.c
++++ b/CORE/MAC/src/pe/lim/limProcessMessageQueue.c
+@@ -895,6 +895,14 @@ limHandle80211Frames(tpAniSirGlobal pMac, tpSirMsgQ limMsg, tANI_U8 *pDeferMsg)
+             goto end;
+         }
+     }
++    if (pMac->sme.is_dfs_csr_inprogress == true) {
++        psessionEntry = peFindSessionByBssid(pMac, pHdr->bssId, &sessionId);
++        if (psessionEntry && LIM_IS_STA_ROLE(psessionEntry)) {
++            if (pMac->sme.set_dfs_csr_block_tx)
++                pMac->sme.set_dfs_csr_block_tx(pMac->hHdd, false);
++            pMac->sme.is_dfs_csr_inprogress = false;
++        }
++    }
+ #ifdef WLAN_DUMP_MGMTFRAMES
+     limLog( pMac, LOGE, FL("ProtVersion %d, Type %d, Subtype %d rateIndex=%d"),
+             fc.protVer, fc.type, fc.subType,
+diff --git a/CORE/MAC/src/pe/lim/limProcessMlmReqMessages.c b/CORE/MAC/src/pe/lim/limProcessMlmReqMessages.c
+index a0a2712..0915b94 100644
+--- a/CORE/MAC/src/pe/lim/limProcessMlmReqMessages.c
++++ b/CORE/MAC/src/pe/lim/limProcessMlmReqMessages.c
+@@ -4680,7 +4680,7 @@ ePhyChanBondState limGet11ACPhyCBState(tpAniSirGlobal pMac, tANI_U8 channel, tAN
+         else if ((channel - 2 ) == peerCenterChan )
+             cbState =  PHY_QUADRUPLE_CHANNEL_20MHZ_LOW_40MHZ_HIGH;
+         else
+-            limLog (pMac, LOGP,
++            limLog (pMac, LOGE,
+                        FL("Invalid Channel Number = %d Center Chan = %d "),
+                                  channel, peerCenterChan);
+     }
+@@ -4695,7 +4695,7 @@ ePhyChanBondState limGet11ACPhyCBState(tpAniSirGlobal pMac, tANI_U8 channel, tAN
+         else if ((channel - 6 ) == peerCenterChan )
+             cbState =  PHY_QUADRUPLE_CHANNEL_20MHZ_HIGH_40MHZ_HIGH;
+         else
+-           limLog (pMac, LOGP,
++           limLog (pMac, LOGE,
+                          FL("Invalid Channel Number = %d Center Chan = %d "),
+                                             channel, peerCenterChan);
+     }
+diff --git a/CORE/MAC/src/pe/lim/limScanResultUtils.c b/CORE/MAC/src/pe/lim/limScanResultUtils.c
+index 68e431e..73fe0b1 100644
+--- a/CORE/MAC/src/pe/lim/limScanResultUtils.c
++++ b/CORE/MAC/src/pe/lim/limScanResultUtils.c
+@@ -235,6 +235,11 @@ limCollectBssDescription(tpAniSirGlobal pMac,
+     tANI_U8             rxChannel;
+     tANI_U8             rfBand = 0;
+ 
++#ifndef NO_SILEX_CHANGED
++    if (pBPR->beaconInterval >= 2048)
++	return;
++#endif
++
+     pHdr = WDA_GET_RX_MAC_HEADER(pRxPacketInfo);
+ 
+     if (SIR_MAC_B_PR_SSID_OFFSET > WDA_GET_RX_PAYLOAD_LEN(pRxPacketInfo))
+diff --git a/CORE/MAC/src/pe/lim/limSendSmeRspMessages.c b/CORE/MAC/src/pe/lim/limSendSmeRspMessages.c
+index 698f538..17f213d 100644
+--- a/CORE/MAC/src/pe/lim/limSendSmeRspMessages.c
++++ b/CORE/MAC/src/pe/lim/limSendSmeRspMessages.c
+@@ -3032,6 +3032,9 @@ void limHandleCSAoffloadMsg(tpAniSirGlobal pMac,tpSirMsgQ MsgQ)
+       psessionEntry->gLimChannelSwitch.primaryChannel = csa_params->channel;
+       psessionEntry->gLimChannelSwitch.state = eLIM_CHANNEL_SWITCH_PRIMARY_ONLY;
+       psessionEntry->gLimChannelSwitch.secondarySubBand = PHY_SINGLE_CHANNEL_CENTERED;
++      pMac->sme.is_dfs_csr_inprogress = true;
++      if (pMac->sme.set_dfs_csr_block_tx)
++          pMac->sme.set_dfs_csr_block_tx(pMac->hHdd, true);
+ 
+ #ifdef WLAN_FEATURE_11AC
+       if(psessionEntry->vhtCapability)
+diff --git a/CORE/MAC/src/pe/lim/limUtils.c b/CORE/MAC/src/pe/lim/limUtils.c
+index ba752a3..6e15b4d 100644
+--- a/CORE/MAC/src/pe/lim/limUtils.c
++++ b/CORE/MAC/src/pe/lim/limUtils.c
+@@ -1319,6 +1319,7 @@ limIsNullSsid( tSirMacSSid *pSsid )
+         }
+ 
+ #define ASCII_SPACE_CHARACTER 0x20
++#ifdef NO_SILEX_CHANGED
+         /* If the first charactes is space and SSID length is 1
+          * then consider it as NULL SSID*/
+         if((ASCII_SPACE_CHARACTER == pSsid->ssId[0])&&
+@@ -1329,6 +1330,8 @@ limIsNullSsid( tSirMacSSid *pSsid )
+         }
+         else
+         {
++#endif /* NO_SILEX_CHANGED */
++
+             /* check if all the charactes in SSID are NULL*/
+             SsidLength = pSsid->length;
+             pSsidStr = pSsid->ssId;
+@@ -1347,7 +1350,9 @@ limIsNullSsid( tSirMacSSid *pSsid )
+                 fNullSsid = true;
+                 break;
+             }
++#ifdef NO_SILEX_CHANGED
+         }
++#endif /* NO_SILEX_CHANGED */
+     }
+     while( 0 );
+ 
+diff --git a/CORE/SAP/inc/sapApi.h b/CORE/SAP/inc/sapApi.h
+index 1032bc6..12cb55b 100644
+--- a/CORE/SAP/inc/sapApi.h
++++ b/CORE/SAP/inc/sapApi.h
+@@ -750,6 +750,7 @@ typedef struct sSapDfsInfo
+     bool               dfs_beacon_tx_enhanced;
+     uint16_t           reduced_beacon_interval;
+     enum sub20_chan_switch_mode  sub20_switch_mode;
++    v_U8_t             dfs_full;
+ #ifdef WLAN_FEATURE_SAP_TO_FOLLOW_STA_CHAN
+     v_U8_t              csaSwitchCount;
+ #endif
+diff --git a/CORE/SAP/src/sapApiLinkCntl.c b/CORE/SAP/src/sapApiLinkCntl.c
+index 96be69e..52a4c7d 100644
+--- a/CORE/SAP/src/sapApiLinkCntl.c
++++ b/CORE/SAP/src/sapApiLinkCntl.c
+@@ -767,7 +767,7 @@ WLANSAP_RoamCallback
+                    pMac->sap.SapDfsInfo.user_provided_target_channel;
+                pMac->sap.SapDfsInfo.user_provided_target_channel = 0;
+            }
+-
++#if 0 /* silex */
+            if (pMac->sap.SapDfsInfo.target_channel == 0) {
+                /* No available channel found */
+                v_U8_t  intf;
+@@ -795,7 +795,7 @@ WLANSAP_RoamCallback
+                }
+                break;
+            }
+-
++#endif
+            pMac->sap.SapDfsInfo.cac_state = eSAP_DFS_DO_NOT_SKIP_CAC;
+            sap_CacResetNotify(hHal);
+ 
+diff --git a/CORE/SAP/src/sapFsm.c b/CORE/SAP/src/sapFsm.c
+index 2fab9b4..5d0ea51 100644
+--- a/CORE/SAP/src/sapFsm.c
++++ b/CORE/SAP/src/sapFsm.c
+@@ -1413,6 +1413,546 @@ static bool sap_is_valid_acs_channel(ptSapContext sap_ctx, uint8_t channel)
+ 	return false;
+ }
+ 
++#define DOT11_MODE_11ac 4  /* BW80 */
++#define DOT11_MODE_11n  2  /* BW40 */
++#define DOT11_MODE_11a  1  /* BW20 */
++
++static v_U8_t sapCheckDot11mode(ptSapContext sapContext)
++{
++    v_U8_t dot11mode=0;
++
++	switch(sapContext->csrRoamProfile.vht_channel_width){
++		case eHT_CHANNEL_WIDTH_80MHZ:
++			dot11mode = DOT11_MODE_11ac;
++			break;
++		case eHT_CHANNEL_WIDTH_40MHZ:
++			dot11mode = DOT11_MODE_11n;
++			break;
++		case eHT_CHANNEL_WIDTH_20MHZ:
++			dot11mode = DOT11_MODE_11a;
++			break;
++		default:
++			dot11mode = DOT11_MODE_11a;
++			break;
++	}
++
++	return dot11mode;
++}
++
++static int sapGetNextChannel(int dot11mode,int cur_ch,const v_COUNTRYCODE_t country_code)
++{
++	u_int8_t w56_11a_channel_list[12] = { 100, 104, 108, 112, 116, 120, 124, 128, 132, 136, 140, 100};
++	u_int8_t w56_11n_channel_list[14] = { 100, 104, 108, 112, 116, 120, 124, 128, 132, 136, 140, 140, 100, 100};
++	u_int8_t w56_11ac_channel_list[20] = {100, 104, 108, 112, 116, 120, 124, 128, 132, 132, 132, 132, 140, 140, 140, 140, 100, 100, 100, 100};
++	u_int8_t w53_11a_channel_list[5] = {52, 56, 60, 64, 52};
++	u_int8_t w53_11n_channel_list[6] = {52, 56, 60, 64, 52, 56};
++	u_int8_t w53_11ac_channel_list[8] = {52, 56, 60, 64, 36, 36, 36, 36};
++
++	u_int8_t *channel_list = NULL;
++	int next_ch = 140;
++	int i = 0;
++
++	if( cur_ch >= 100 ) {
++		if ( dot11mode == DOT11_MODE_11ac )
++				channel_list = w56_11ac_channel_list;
++		else if ( dot11mode == DOT11_MODE_11n )
++				channel_list = w56_11n_channel_list;
++		else if ( dot11mode == DOT11_MODE_11a )
++				channel_list = w56_11a_channel_list;
++	}
++	else {
++		if ( dot11mode == DOT11_MODE_11ac )
++				channel_list = w53_11ac_channel_list;
++		else if ( dot11mode == DOT11_MODE_11n )
++				channel_list = w53_11n_channel_list;
++		else if ( dot11mode == DOT11_MODE_11a )
++				channel_list = w53_11a_channel_list;
++	}
++
++	for ( i=0; i<strlen(channel_list); i++) {
++		if ( cur_ch == channel_list[i] ) {
++			next_ch = channel_list[i+dot11mode];
++			break;
++		}
++	}
++
++	/* CANADA */
++	if( !memcmp(country_code, "CA", 2) && next_ch >= 120 && next_ch <= 128 ) {
++				next_ch = 132;
++	}
++
++	return next_ch;
++}
++
++static void sap_SetDfsFull(ptSapContext sapContext, u_int8_t value)
++{
++    tHalHandle hHal = VOS_GET_HAL_CB(sapContext->pvosGCtx);
++    tpAniSirGlobal pMac;
++
++    if (NULL == hHal)
++    {
++        return;
++    }
++    pMac = PMAC_STRUCT( hHal );
++    pMac->sap.SapDfsInfo.dfs_full = value;
++
++}
++
++
++static u_int8_t sap_GetDfsFull(ptSapContext sapContext)
++{
++    tHalHandle hHal = VOS_GET_HAL_CB(sapContext->pvosGCtx);
++    tpAniSirGlobal pMac;
++
++    if (NULL == hHal)
++    {
++        return 0;
++    }
++    pMac = PMAC_STRUCT( hHal );
++    return pMac->sap.SapDfsInfo.dfs_full;
++
++}
++
++
++
++static v_U8_t sapChannelSelect(v_U32_t current_channel, int available_chan_count,int dot11mode,
++                               v_U8_t *available_chan_idx,const v_COUNTRYCODE_t country_code)
++{
++	int i=0;
++	int target_channel = 0;
++	int next_ch=0;
++
++	target_channel = sapGetNextChannel(dot11mode,current_channel,country_code);
++
++	if (available_chan_idx != NULL) {
++		for(i=0;i<available_chan_count;i++){
++			if(target_channel == available_chan_idx[i]){
++				next_ch=target_channel;
++				break;
++			}
++		}
++	} else {
++		next_ch=target_channel;
++	}
++
++	return next_ch;
++}
++
++
++static unsigned long sapGetNolRadarFoundTime(ptSapContext sapContext, v_U8_t channelNumber)
++{
++    int i;
++    unsigned long timeElapsedSinceLastRadar,timeWhenRadarFound,currentTime = 0;
++    tHalHandle hHal = VOS_GET_HAL_CB(sapContext->pvosGCtx);
++    tpAniSirGlobal pMac;
++
++    if (NULL == hHal)
++    {
++        return 0;
++    }
++    else
++    {
++        pMac = PMAC_STRUCT( hHal );
++    }
++
++    if ((pMac->sap.SapDfsInfo.numCurrentRegDomainDfsChannels == 0) ||
++            (pMac->sap.SapDfsInfo.numCurrentRegDomainDfsChannels >
++            NUM_5GHZ_CHANNELS))
++    {
++        return 0;
++    }
++
++    for (i =0 ; i< pMac->sap.SapDfsInfo.numCurrentRegDomainDfsChannels; i++)
++    {
++        if(pMac->sap.SapDfsInfo.sapDfsChannelNolList[i]
++                                 .dfs_channel_number == channelNumber)
++        {
++            timeWhenRadarFound = pMac->sap.SapDfsInfo
++                                 .sapDfsChannelNolList[i]
++                                 .radar_found_timestamp;
++
++            currentTime = vos_get_monotonic_boottime();
++            timeElapsedSinceLastRadar = currentTime - timeWhenRadarFound;
++            if (timeElapsedSinceLastRadar >=  SAP_DFS_NON_OCCUPANCY_PERIOD) /* 30min = 1800000000 usec */
++            {
++                return 0;
++            }
++            else
++            {
++                return (SAP_DFS_NON_OCCUPANCY_PERIOD - timeElapsedSinceLastRadar)/1000;
++            }
++        }
++    }
++    return 0;
++}
++
++
++
++/*
++ * This function custom pick up an AVAILABLE channel
++ */
++static v_U8_t sapCustomChannelSel(ptSapContext sapContext)
++{
++
++    v_U8_t   available_chnl_count = 0;
++    v_U8_t   valid_chnl_count = 0;
++    v_U8_t   availableChannels[WNI_CFG_VALID_CHANNEL_LIST_LEN] = {0,};
++    v_U8_t   target_channel = 0;
++    v_BOOL_t isChannelNol = VOS_FALSE;
++    v_BOOL_t is_valid_acs_chan = VOS_FALSE;
++    chan_bonding_bitmap channelBitmap;
++    v_U8_t   i = 0;
++    v_U8_t   channelID;
++    tHalHandle hHal = VOS_GET_HAL_CB(sapContext->pvosGCtx);
++    tpAniSirGlobal pMac;
++    tANI_U32 chanWidth;
++    ePhyChanBondState cbModeCurrent;
++    v_U8_t   *tempChannels = NULL;
++    uint8_t dfs_region;
++	v_U8_t dot11mode;
++	int current_channel = sapContext->channel;
++
++    if (NULL == hHal) {
++        VOS_TRACE(VOS_MODULE_ID_SAP, VOS_TRACE_LEVEL_ERROR,
++                  FL("invalid hHal"));
++        return target_channel;
++    }
++
++    pMac = PMAC_STRUCT(hHal);
++    if (NULL == pMac) {
++        VOS_TRACE(VOS_MODULE_ID_SAP, VOS_TRACE_LEVEL_ERROR,
++                  FL("invalid pMac"));
++        return target_channel;
++    }
++
++    /*
++     * Retrieve the original one and store it.
++     * use the stored original value when you call this function next time
++     * so fall back mechanism always starts with original ini value.
++     */
++
++    if (pMac->sap.SapDfsInfo.orig_cbMode == 0)
++    {
++        pMac->sap.SapDfsInfo.orig_cbMode = sme_SelectCBMode(hHal,
++                                         sapContext->csrRoamProfile.phyMode,
++                                         sapContext->channel,
++                                         sapContext->secondary_ch,
++                                         &sapContext->vht_channel_width,
++                                         sapContext->ch_width_orig);
++        pMac->sap.SapDfsInfo.orig_cbMode = csrConvertCBIniValueToPhyCBState(
++                                              pMac->sap.SapDfsInfo.orig_cbMode);
++        cbModeCurrent = pMac->sap.SapDfsInfo.orig_cbMode;
++    }
++    else
++    {
++        cbModeCurrent = pMac->sap.SapDfsInfo.orig_cbMode;
++    }
++
++    /*
++     * Retrieve the original one and store it.
++     * use the stored original value when you call this function next time
++     * so fall back mechanism always starts with original ini value.
++     */
++    if (pMac->sap.SapDfsInfo.orig_chanWidth == 0)
++    {
++        pMac->sap.SapDfsInfo.orig_chanWidth =
++                  sapContext->ch_width_orig;
++        chanWidth = pMac->sap.SapDfsInfo.orig_chanWidth;
++    }
++    else
++    {
++        chanWidth = pMac->sap.SapDfsInfo.orig_chanWidth;
++    }
++
++    if (sapGet5GHzChannelList(sapContext))
++    {
++        VOS_TRACE(VOS_MODULE_ID_SAP, VOS_TRACE_LEVEL_INFO_LOW,
++                  FL("Getting 5Ghz channel list failed"));
++        return target_channel;
++    }
++
++    vos_nv_get_dfs_region(&dfs_region);
++
++    /*
++     * valid_chnl_count will be used to find number of valid channels
++     * after following for loop ends
++     */
++    valid_chnl_count = sapContext->SapAllChnlList.numChannel;
++    /* loop to check ACS range or NOL channels */
++    for (i = 0; i < sapContext->SapAllChnlList.numChannel; i++)
++    {
++        channelID = sapContext->SapAllChnlList.channelList[i].channel;
++
++        /*
++         * IN JAPAN REGULATORY DOMAIN CHECK IF THE FOLLOWING TWO
++         * TWO RULES APPLY AND FILTER THE AVAILABLE CHANNELS
++         * ACCORDINGLY.
++         *
++         * 1. If we are operating in Japan regulatory domain
++         * Check if Japan W53 Channel operation is NOT
++         * allowed and if its not allowed then mark all the
++         * W53 channels as Invalid.
++         *
++         * 2. If we are operating in Japan regulatory domain
++         * Check if channel switch between Indoor/Outdoor
++         * is allowed. If it is not allowed then limit
++         * the avaiable channels to Indoor or Outdoor
++         * channels only based up on the SAP Channel location
++         * indicated by "sap_operating_channel_location" param.
++         */
++        if (DFS_MKK4_DOMAIN == dfs_region)
++        {
++            /*
++             * Check for JAPAN W53 Channel operation capability
++             */
++            if (VOS_TRUE ==  sapDfsIsW53Invalid(hHal, channelID))
++            {
++                VOS_TRACE(VOS_MODULE_ID_SAP, VOS_TRACE_LEVEL_INFO_LOW,
++                      FL("index:%d, Channel=%d Invalid,Japan W53 Disabled"),
++                      i, channelID);
++                sapContext->SapAllChnlList.channelList[i].valid = VOS_FALSE;
++                valid_chnl_count--;
++                continue;
++            }
++
++            /*
++             * If SAP's preferred channel location is Indoor
++             * then set all the outdoor channels in the domain
++             * to invalid.If the preferred channel location is
++             * outdoor then set all the Indoor channels in the
++             * domain to Invalid.
++             */
++            if (VOS_FALSE ==
++                        sapDfsIsChannelInPreferredLocation(hHal, channelID))
++            {
++                VOS_TRACE(VOS_MODULE_ID_SAP, VOS_TRACE_LEVEL_INFO_LOW,
++                   FL("CHAN=%d is invalid,preferred Channel Location %d Only"),
++                   channelID,
++                   pMac->sap.SapDfsInfo.sap_operating_chan_preferred_location);
++                sapContext->SapAllChnlList.channelList[i].valid = VOS_FALSE;
++                valid_chnl_count--;
++                continue;
++            }
++        }
++
++        if (vos_nv_getChannelEnabledState(channelID) == NV_CHANNEL_DFS)
++        {
++            isChannelNol = sapDfsIsChannelInNolList(sapContext,
++                                                   channelID,
++                                                   PHY_SINGLE_CHANNEL_CENTERED);
++            if (VOS_TRUE == isChannelNol)
++            {
++                /*
++                 * Mark this channel invalid since it is still in
++                 * DFS Non-Occupancy-Period which is 30 mins.
++                 */
++                VOS_TRACE(VOS_MODULE_ID_SAP, VOS_TRACE_LEVEL_INFO_LOW,
++                          FL("index: %d, Channel = %d Present in NOL"),
++                          i, channelID);
++                sapContext->SapAllChnlList.channelList[i].valid = VOS_FALSE;
++                valid_chnl_count--;
++                continue;
++            }
++        }
++
++#ifdef FEATURE_AP_MCC_CH_AVOIDANCE
++        /* avoid channels on which another MDM AP in MCC mode is detected. */
++        if (pMac->sap.sap_channel_avoidance
++                && sapContext->sap_detected_avoid_ch_ie.present) {
++            if (sap_check_in_avoid_ch_list(sapContext, channelID)) {
++                VOS_TRACE(VOS_MODULE_ID_SAP, VOS_TRACE_LEVEL_INFO_LOW,
++                          FL("index: %d, Channel = %d, avoided due to "
++                          "presence of another AP+AP MCC device in same "
++                          "channel."),
++                          i, channelID);
++                sapContext->SapAllChnlList.channelList[i].valid = VOS_FALSE;
++            }
++        }
++#endif /* FEATURE_AP_MCC_CH_AVOIDANCE */
++
++        /* check if the channel is within ACS channel range */
++        is_valid_acs_chan = sap_is_valid_acs_channel(sapContext,
++                                          channelID);
++        if (is_valid_acs_chan == false)
++        {
++            /*
++             * mark this channel invalid since it is out of ACS channel range
++             */
++            VOS_TRACE(VOS_MODULE_ID_SAP, VOS_TRACE_LEVEL_INFO_LOW,
++                     FL("index: %d, Channel=%d out of ACS channel range %d-%d"),
++                     i, channelID, sapContext->acs_cfg->start_ch,
++                     sapContext->acs_cfg->end_ch);
++            sapContext->SapAllChnlList.channelList[i].valid = VOS_FALSE;
++            valid_chnl_count--;
++            continue;
++        }
++    } /* end of check for NOL or ACS channels */
++
++    /* valid_chnl_count now have number of valid channels */
++    tempChannels = vos_mem_malloc(valid_chnl_count);
++    if (tempChannels == NULL) {
++        VOS_TRACE(VOS_MODULE_ID_SAP, VOS_TRACE_LEVEL_ERROR,
++                  FL("sapdfs: memory alloc failed"));
++        return target_channel;
++    }
++
++    do
++    {
++        v_U8_t   j = 0;
++#ifdef WLAN_ENABLE_CHNL_MATRIX_RESTRICTION
++        tSapDfsNolInfo *pNol = pMac->sap.SapDfsInfo.sapDfsChannelNolList;
++#endif
++
++        /* prepare temp list of just the valid channels */
++        for (i = 0; i < sapContext->SapAllChnlList.numChannel; i++) {
++            if (sapContext->SapAllChnlList.channelList[i].valid) {
++                VOS_TRACE(VOS_MODULE_ID_SAP, VOS_TRACE_LEVEL_ERROR,
++                          FL("sapdfs: Adding Channel = %d to temp List"),
++                          sapContext->SapAllChnlList.channelList[i].channel);
++                tempChannels[j++] =
++                    sapContext->SapAllChnlList.channelList[i].channel;
++            }
++        }
++
++#ifdef WLAN_ENABLE_CHNL_MATRIX_RESTRICTION
++        VOS_TRACE(VOS_MODULE_ID_SAP, VOS_TRACE_LEVEL_ERROR,
++                  FL("sapdfs: Processing temp channel list against NOL."));
++        if (VOS_STATUS_SUCCESS != sapMarkChannelsLeakingIntoNOL(sapContext,
++                                                               cbModeCurrent,
++                                                               pNol,
++                                                               valid_chnl_count,
++                                                               tempChannels)) {
++            vos_mem_free(tempChannels);
++            return target_channel;
++        }
++#endif
++        vos_mem_zero(availableChannels, sizeof(availableChannels));
++        vos_mem_zero(&channelBitmap, sizeof(channelBitmap));
++        channelBitmap.chanBondingSet[0].startChannel = 36;
++        channelBitmap.chanBondingSet[1].startChannel = 52;
++        channelBitmap.chanBondingSet[2].startChannel = 100;
++        channelBitmap.chanBondingSet[3].startChannel = 116;
++        channelBitmap.chanBondingSet[4].startChannel = 132;
++        channelBitmap.chanBondingSet[5].startChannel = 149;
++        /* now loop through whatever is left of channel list */
++        VOS_TRACE(VOS_MODULE_ID_SAP, VOS_TRACE_LEVEL_ERROR,
++                  FL("sapdfs: Moving temp channel list to final."));
++        for (i = 0; i < valid_chnl_count; i++ ){
++            /*
++             * add channel from temp channel list to bitmap or fianl
++             * channel list (in case of 20MHz width)
++             */
++            if (tempChannels[i] != 0) {
++                VOS_TRACE(VOS_MODULE_ID_SAP, VOS_TRACE_LEVEL_DEBUG,
++                          FL("sapdfs: processing channel: %d "),
++                          tempChannels[i]);
++                /* for 20MHz, directly create available channel list */
++                if (cbModeCurrent == PHY_SINGLE_CHANNEL_CENTERED) {
++                    VOS_TRACE(VOS_MODULE_ID_SAP,
++                              VOS_TRACE_LEVEL_DEBUG,
++                              FL("sapdfs: Channel=%d added to available list"),
++                              tempChannels[i]);
++                    availableChannels[available_chnl_count++] =
++                        tempChannels[i];
++                } else {
++                    VOS_TRACE(VOS_MODULE_ID_SAP,
++                              VOS_TRACE_LEVEL_DEBUG,
++                              FL("sapdfs: Channel=%d added to bitmap"),
++                              tempChannels[i]);
++                    sapSetBitmap(&channelBitmap, tempChannels[i]);
++                }
++            }
++        }
++
++        /* if 40 MHz or 80 MHz, populate available channel list from bitmap */
++        if (cbModeCurrent != PHY_SINGLE_CHANNEL_CENTERED) {
++            available_chnl_count = sapPopulateAvailableChannels(&channelBitmap,
++                                              cbModeCurrent,
++                                              availableChannels);
++            /* if no valid channel bonding found, fallback to lower bandwidth */
++            if (available_chnl_count == 0) {
++                if (cbModeCurrent >=
++                     PHY_QUADRUPLE_CHANNEL_20MHZ_LOW_40MHZ_CENTERED) {
++                    VOS_TRACE(VOS_MODULE_ID_SAP,
++                              VOS_TRACE_LEVEL_WARN,
++                              FL("sapdfs:No 80MHz cb found, falling to 40MHz"));
++                    VOS_TRACE(VOS_MODULE_ID_SAP,
++                              VOS_TRACE_LEVEL_WARN,
++                              FL("sapdfs:Changing chanWidth from [%d] to [%d]"),
++                                 chanWidth, eHT_CHANNEL_WIDTH_40MHZ);
++                    VOS_TRACE(VOS_MODULE_ID_SAP,
++                              VOS_TRACE_LEVEL_WARN,
++                              FL("sapdfs:Changing CB mode from [%d] to [%d]"),
++                                 cbModeCurrent, PHY_DOUBLE_CHANNEL_LOW_PRIMARY);
++                    cbModeCurrent = PHY_DOUBLE_CHANNEL_LOW_PRIMARY;
++                    chanWidth = eHT_CHANNEL_WIDTH_40MHZ;
++                    /* continue to start of do loop */
++                    continue;
++                } else if (cbModeCurrent >=
++                             PHY_DOUBLE_CHANNEL_LOW_PRIMARY ) {
++                    VOS_TRACE(VOS_MODULE_ID_SAP,
++                              VOS_TRACE_LEVEL_WARN,
++                              FL("sapdfs:No 40MHz cb found, falling to 20MHz"));
++                    VOS_TRACE(VOS_MODULE_ID_SAP,
++                              VOS_TRACE_LEVEL_WARN,
++                              FL("sapdfs:Changing chanWidth from [%d] to [%d]"),
++                                 chanWidth, eHT_CHANNEL_WIDTH_20MHZ);
++                    VOS_TRACE(VOS_MODULE_ID_SAP,
++                              VOS_TRACE_LEVEL_WARN,
++                              FL("sapdfs:Changing CB mode from [%d] to [%d]"),
++                                 cbModeCurrent, PHY_SINGLE_CHANNEL_CENTERED);
++                    cbModeCurrent = PHY_SINGLE_CHANNEL_CENTERED;
++                    chanWidth = eHT_CHANNEL_WIDTH_20MHZ;
++                    /* continue to start of do loop */
++                    continue;
++                }
++            }
++        }
++
++        /*
++         * by now, available channels list will be populated or
++         * no channels are avaialbe
++         */
++		dot11mode = sapCheckDot11mode(sapContext);
++
++		target_channel = sapChannelSelect(current_channel,valid_chnl_count,dot11mode,tempChannels,sapContext->csrRoamProfile.countryCode);
++		if(target_channel == 0)
++		{
++			if( current_channel >= 100 ) /* All channel on DSF is NOL */
++
++			{
++				sapSignalHDDevent(sapContext, NULL, eSAP_DFS_NO_AVAILABLE_CHANNEL,
++								  (v_PVOID_t) eSAP_STATUS_SUCCESS);
++				sap_SetDfsFull(sapContext,1);
++			}
++			target_channel = sapChannelSelect(current_channel,0,dot11mode,NULL,sapContext->csrRoamProfile.countryCode);
++			if (current_channel <= 64)
++			{
++				target_channel = 36;
++			}
++		}
++
++        pMac->sap.SapDfsInfo.new_chanWidth = chanWidth;
++        pMac->sap.SapDfsInfo.new_cbMode = cbModeCurrent;
++        VOS_TRACE(VOS_MODULE_ID_SAP,
++                  VOS_TRACE_LEVEL_INFO_LOW,
++                  FL("sapdfs: New CB mode = %d"),
++                  pMac->sap.SapDfsInfo.new_cbMode);
++        VOS_TRACE(VOS_MODULE_ID_SAP,
++                  VOS_TRACE_LEVEL_INFO_LOW,
++                  FL("sapdfs: New Channel width = %d"),
++                  pMac->sap.SapDfsInfo.new_chanWidth);
++        VOS_TRACE(VOS_MODULE_ID_SAP,
++                  VOS_TRACE_LEVEL_INFO_LOW,
++                  FL("sapdfs: target_channel = %d"), target_channel);
++        break;
++    } while(1); /* this loop will iterate at max 3 times */
++
++    vos_mem_free(tempChannels);
++    return target_channel;
++}
++
++
+ /*
+  * This function randomly pick up an AVAILABLE channel
+  */
+@@ -3995,6 +4535,12 @@ eHalStatus sap_CloseSession(tHalHandle hHal,
+             pMac->sap.SapDfsInfo.is_dfs_cac_timer_running = 0;
+             vos_timer_destroy(&pMac->sap.SapDfsInfo.sap_dfs_cac_timer);
+         }
++
++        if (sap_GetDfsFull(sapContext))
++        {
++            sap_SetDfsFull(sapContext,0);
++        }
++
+         pMac->sap.SapDfsInfo.cac_state = eSAP_DFS_DO_NOT_SKIP_CAC;
+         sap_CacResetNotify(hHal);
+         vos_mem_zero(&pMac->sap, sizeof(pMac->sap));
+@@ -5559,7 +6105,6 @@ static VOS_STATUS sapGet5GHzChannelList(ptSapContext sapContext)
+             count++;
+         }
+     }
+-
+     sapContext->SapAllChnlList.numChannel = count;
+     VOS_TRACE(VOS_MODULE_ID_SAP, VOS_TRACE_LEVEL_INFO_LOW,
+               "%s[%d] NUMBER OF CHANNELS count = %d"
+@@ -5645,7 +6190,8 @@ v_U8_t sapIndicateRadar(ptSapContext sapContext, tSirSmeDfsEventInd *dfs_event)
+         VOS_TRACE(VOS_MODULE_ID_SAP, VOS_TRACE_LEVEL_DEBUG,
+                   FL("Candidate channel exist, ch= %d"), target_channel);
+     } else {
+-        target_channel = sapRandomChannelSel(sapContext);
++//        target_channel = sapRandomChannelSel(sapContext);
++		target_channel = sapCustomChannelSel(sapContext);
+     }
+ 
+     if (0 == target_channel)
+@@ -5698,6 +6244,11 @@ void sapDfsCacTimerCallback(void *data)
+     /* Check to ensure that SAP is in DFS WAIT state*/
+     if (sapContext->sapsMachine == eSAP_DFS_CAC_WAIT)
+     {
++        if (sap_GetDfsFull(sapContext))
++        {
++            sap_SetDfsFull(sapContext,0);
++        }
++
+         /*
+          * CAC Complete, post eSAP_DFS_CHANNEL_CAC_END to sapFsm
+          */
+@@ -5740,6 +6291,11 @@ static int sapStopDfsCacTimer(ptSapContext sapContext)
+         return 0;
+     }
+ 
++    if (sap_GetDfsFull(sapContext))
++    {
++        sap_SetDfsFull(sapContext,0);
++    }
++
+     vos_timer_stop(&pMac->sap.SapDfsInfo.sap_dfs_cac_timer);
+     pMac->sap.SapDfsInfo.is_dfs_cac_timer_running = 0;
+     vos_timer_destroy(&pMac->sap.SapDfsInfo.sap_dfs_cac_timer);
+@@ -5775,7 +6331,7 @@ sap_is_channel_bonding_etsi_weather_channel(ptSapContext sap_context)
+ int sapStartDfsCacTimer(ptSapContext sapContext)
+ {
+     VOS_STATUS status;
+-    v_U32_t cacTimeOut;
++    unsigned long cacTimeOut;
+     tHalHandle hHal = NULL;
+     tpAniSirGlobal pMac = NULL;
+     uint8_t dfs_region;
+@@ -5812,8 +6368,14 @@ int sapStartDfsCacTimer(ptSapContext sapContext)
+     {
+         cacTimeOut = ETSI_WEATHER_CH_CAC_TIMEOUT;
+     }
++
++    if (sap_GetDfsFull(sapContext))
++    {
++        cacTimeOut += sapGetNolRadarFoundTime(sapContext, sapContext->channel);
++    }
++
+     VOS_TRACE(VOS_MODULE_ID_SAP, VOS_TRACE_LEVEL_INFO_MED,
+-              "sapdfs: SAP_DFS_CHANNEL_CAC_START on CH - %d, CAC TIMEOUT - %d sec",
++              "sapdfs: SAP_DFS_CHANNEL_CAC_START on CH - %d, CAC TIMEOUT - %ld sec",
+               sapContext->channel, cacTimeOut/1000);
+ 
+     vos_timer_init(&pMac->sap.SapDfsInfo.sap_dfs_cac_timer,
+diff --git a/CORE/SERVICES/COMMON/wmi_tlv_defs.h b/CORE/SERVICES/COMMON/wmi_tlv_defs.h
+index 27351e2..868e74f 100644
+--- a/CORE/SERVICES/COMMON/wmi_tlv_defs.h
++++ b/CORE/SERVICES/COMMON/wmi_tlv_defs.h
+@@ -1008,6 +1008,10 @@ typedef enum {
+     WMITLV_TAG_STRUC_wmi_audio_aggr_del_group,
+     WMITLV_TAG_STRUC_wmi_audio_aggr_set_group_rate,
+     WMITLV_TAG_STRUC_wmi_audio_aggr_set_group_retry,
++#if 1
++    WMI_SET_THRESH62_CMDID_wmi_thresh62_fixed_param=0xffe,
++    WMI_SET_NFLIMIT_MAX_CMDID_wmi_nflimit_cmd_fixed_param=0xfff,/* maximum tagid */
++#endif
+ } WMITLV_TAG_ID;
+ 
+ /*
+@@ -1074,6 +1078,8 @@ typedef enum {
+     OP(WMI_ECHO_CMDID) \
+     OP(WMI_PDEV_UTF_CMDID) \
+     OP(WMI_PDEV_QVIT_CMDID) \
++    OP(WMI_SET_NFLIMIT_MAX_CMDID) \
++    OP(WMI_SET_THRESH62_CMDID) \
+     OP(WMI_VDEV_SET_KEEPALIVE_CMDID) \
+     OP(WMI_VDEV_GET_KEEPALIVE_CMDID) \
+     OP(WMI_FORCE_FW_HANG_CMDID) \
+@@ -2027,6 +2033,14 @@ WMITLV_CREATE_PARAM_STRUC(WMI_ECHO_CMDID);
+ 
+ WMITLV_CREATE_PARAM_STRUC(WMI_PDEV_SET_WMM_PARAMS_CMDID);
+ 
++#define WMITLV_TABLE_WMI_SET_NFLIMIT_MAX_CMDID(id,op,buf,len) \
++    WMITLV_ELEM(id,op,buf,len, WMI_SET_NFLIMIT_MAX_CMDID_wmi_nflimit_cmd_fixed_param, wmi_nflimit_cmd_fixed_param, fixed_param, WMITLV_SIZE_FIX)
++WMITLV_CREATE_PARAM_STRUC(WMI_SET_NFLIMIT_MAX_CMDID);
++
++#define WMITLV_TABLE_WMI_SET_THRESH62_CMDID(id,op,buf,len) \
++    WMITLV_ELEM(id,op,buf,len, WMI_SET_THRESH62_CMDID_wmi_thresh62_fixed_param, wmi_thresh62_fixed_param, fixed_param, WMITLV_SIZE_FIX)
++WMITLV_CREATE_PARAM_STRUC(WMI_SET_THRESH62_CMDID);
++
+ /* Vdev start request Cmd */
+ #define WMITLV_TABLE_WMI_VDEV_START_REQUEST_CMDID(id,op,buf,len) \
+     WMITLV_ELEM(id,op,buf,len, WMITLV_TAG_STRUC_wmi_vdev_start_request_cmd_fixed_param, wmi_vdev_start_request_cmd_fixed_param, fixed_param, WMITLV_SIZE_FIX) \
+diff --git a/CORE/SERVICES/COMMON/wmi_unified.h b/CORE/SERVICES/COMMON/wmi_unified.h
+index 6388e60..8e4b2a7 100644
+--- a/CORE/SERVICES/COMMON/wmi_unified.h
++++ b/CORE/SERVICES/COMMON/wmi_unified.h
+@@ -1004,6 +1004,13 @@ typedef enum {
+     /* invoke neighbor report from FW */
+     WMI_11K_INVOKE_NEIGHBOR_REPORT_CMDID,
+ 
++#if 1
++    /* custom noise floor limit max value */
++    WMI_SET_NFLIMIT_MAX_CMDID,
++    /* custom thresh62 value */
++    WMI_SET_THRESH62_CMDID,
++#endif
++
+     /* GPIO Configuration */
+     WMI_GPIO_CONFIG_CMDID=WMI_CMD_GRP_START_ID(WMI_GRP_GPIO),
+     WMI_GPIO_OUTPUT_CMDID,
+@@ -4946,6 +4953,19 @@ typedef struct {
+     A_UINT32 value;
+ }wmi_echo_cmd_fixed_param;
+ 
++#if 1
++typedef struct {
++    A_UINT32 tlv_header;     /* TLV tag and len; tag equals WMITLV_TAG_STRUC_wmi_echo_cmd_fixed_param */
++    A_INT16 nflimit_max;
++    A_UCHAR is2GHz;
++} wmi_nflimit_cmd_fixed_param;
++
++typedef struct {
++    A_UINT32 tlv_header;     /* TLV tag and len; tag equals WMITLV_TAG_STRUC_wmi_echo_cmd_fixed_param */
++    A_INT16 thresh62_val;
++    A_UCHAR is2GHz;
++} wmi_thresh62_fixed_param;
++#endif
+ 
+ typedef struct {
+     A_UINT32 tlv_header;     /* TLV tag and len; tag equals WMITLV_TAG_STRUC_wmi_pdev_set_regdomain_cmd_fixed_param */
+@@ -6161,6 +6181,9 @@ typedef enum {
+      */
+     WMI_PDEV_PARAM_SET_CMD_OBSS_PD_PER_AC,
+ 
++    /* silex specific WMI parameters from 0x400 */
++    WMI_PDEV_PARAM_BANGRADAR   = 0x400,
++
+ } WMI_PDEV_PARAM;
+ 
+ #define WMI_PDEV_ONLY_BSR_TRIG_IS_ENABLED(trig_type) WMI_GET_BITS(trig_type, 0, 1)
+diff --git a/CORE/SERVICES/WMA/wma.c b/CORE/SERVICES/WMA/wma.c
+index 1cb8346..21471bb 100644
+--- a/CORE/SERVICES/WMA/wma.c
++++ b/CORE/SERVICES/WMA/wma.c
+@@ -483,6 +483,7 @@ static void wma_beacon_miss_handler(tp_wma_handle wma, u_int32_t vdev_id,
+ 				    uint32_t rssi);
+ static void wma_set_suspend_dtim(tp_wma_handle wma);
+ static void wma_set_resume_dtim(tp_wma_handle wma);
++void wma_set_dtim_policy(tp_wma_handle wma, uint8_t val);
+ static int wma_roam_event_callback(WMA_HANDLE handle, u_int8_t *event_buf,
+ 				u_int32_t len);
+ static VOS_STATUS wma_stop_scan(tp_wma_handle wma_handle,
+@@ -712,6 +713,7 @@ static tANI_U8 wma_get_mcs_idx(tANI_U16 maxRate, tANI_U8 rate_flags,
+ 
+ 	*mcsRateFlag = rate_flags;
+ 	*mcsRateFlag &= ~eHAL_TX_RATE_SGI;
++	*mcsRateFlag &= ~eHAL_TX_RATE_SGI_BY_SILEX;
+ 
+ #ifdef WLAN_FEATURE_11AC
+ 	for (curIdx = 0; curIdx < MAX_VHT_MCS_IDX; curIdx++) {
+@@ -735,6 +737,7 @@ static tANI_U8 wma_get_mcs_idx(tANI_U16 maxRate, tANI_U8 rate_flags,
+ 					vht_mcs_nss2[curIdx].ht40_rate[1]);
+ 			if (cur_rate) {
+ 				*mcsRateFlag &= ~eHAL_TX_RATE_VHT80;
++				*mcsRateFlag |= eHAL_TX_RATE_VHT40;
+ 				goto rate_found;
+ 			}
+ 		}
+@@ -750,6 +753,7 @@ static tANI_U8 wma_get_mcs_idx(tANI_U16 maxRate, tANI_U8 rate_flags,
+ 			if (cur_rate) {
+ 				*mcsRateFlag &= ~(eHAL_TX_RATE_VHT80 |
+ 						eHAL_TX_RATE_VHT40);
++				*mcsRateFlag |= eHAL_TX_RATE_VHT20;
+ 				goto rate_found;
+ 			}
+ 		}
+@@ -785,8 +789,10 @@ static tANI_U8 wma_get_mcs_idx(tANI_U16 maxRate, tANI_U8 rate_flags,
+ 
+ rate_found:
+ 	/* set SGI flag only if this is SGI rate */
+-	if (cur_rate && is_sgi == true)
++	if (cur_rate && is_sgi == true) {
+ 		*mcsRateFlag |= eHAL_TX_RATE_SGI;
++		*mcsRateFlag |= eHAL_TX_RATE_SGI_BY_SILEX;
++	}
+ 
+ 	WMA_LOGD("%s - cur_rate: %d index: %d rate_flag: 0x%x is_sgi: %d",
+ 		__func__, cur_rate, curIdx, *mcsRateFlag, is_sgi);
+@@ -2837,8 +2843,25 @@ static void wma_update_peer_stats(tp_wma_handle wma, wmi_peer_stats *peer_stats)
+ 			/*The linkspeed returned by fw is in kbps so convert
+ 			 *it in to units of 500kbps which is expected by UMAC*/
+ 			if (peer_stats->peer_tx_rate) {
++#ifdef NO_SILEX_CHANGE
+ 				classa_stats->tx_rate =
+ 					peer_stats->peer_tx_rate/500;
++#else
++				/* avoid the rounding */
++				classa_stats->tx_rate =
++					peer_stats->peer_tx_rate/100;
++
++				/* isSGI? 1:SGI 0:LGI */
++				if (peer_stats->peer_tx_rate & 1) {
++					node->rate_flags |= eHAL_TX_RATE_SGI_BY_SILEX;
++					node->rate_flags |= eHAL_TX_RATE_SGI;
++				} else {
++					if (node->rate_flags & eHAL_TX_RATE_SGI)
++						node->rate_flags ^= eHAL_TX_RATE_SGI;
++					if (node->rate_flags & eHAL_TX_RATE_SGI_BY_SILEX)
++						node->rate_flags ^= eHAL_TX_RATE_SGI_BY_SILEX;
++				}
++#endif /* NO_SILEX_CHANGE */
+ 			}
+ 
+ 			classa_stats->tx_rate_flags = node->rate_flags;
+@@ -5464,10 +5487,8 @@ static int wma_unified_link_radio_stats_event_handler(void *handle,
+ 		 * events may be spoofed. Drop all of them and report error.
+ 		 */
+ 		WMA_LOGE("Invalid following WMI_RADIO_LINK_STATS_EVENTID. Discarding this set");
+-		rs_results->tx_time_per_power_level = NULL;
+ 		vos_mem_free(wma_handle->link_stats_results);
+ 		wma_handle->link_stats_results = NULL;
+-		vos_mem_free(rs_results->tx_time_per_power_level);
+ 		return -EINVAL;
+ 	}
+ 
+@@ -9782,6 +9803,8 @@ VOS_STATUS WDA_open(v_VOID_t *vos_context, v_VOID_t *os_ctx,
+ 	wma_handle->staModDtim = mac_params->staModDtim;
+ 	wma_handle->staDynamicDtim = mac_params->staDynamicDtim;
+ 
++	wma_handle->dtim_policy = mac_params->staDTIMPolicy;
++
+ 	/*
+ 	 * Value of mac_params->wowEnable can be,
+ 	 * 0 - Disable both magic pattern match and pattern byte match.
+@@ -12262,6 +12285,71 @@ static VOS_STATUS wma_reset_tsf_gpio(tp_wma_handle wma_handle, uint32_t vdev_id)
+ }
+ #endif
+ 
++#if 1
++VOS_STATUS wma_nflimit_send(tp_wma_handle wma_handle, wmi_nflimit_cmd_fixed_param *param)
++{
++    VOS_STATUS vos_status = VOS_STATUS_SUCCESS;
++    wmi_buf_t buf;
++    wmi_nflimit_cmd_fixed_param *cmd;
++    int status = 0;
++    u_int16_t len = sizeof(*cmd);
++    buf = wmi_buf_alloc(wma_handle->wmi_handle, len);
++    if (NULL == buf) {
++        WMA_LOGE("Failed to allocate memory");
++        vos_status = VOS_STATUS_E_NOMEM;
++        goto end;
++    }
++    cmd = (wmi_nflimit_cmd_fixed_param *)wmi_buf_data(buf);
++    cmd->nflimit_max = param->nflimit_max;
++    cmd->is2GHz = param->is2GHz;
++    WMITLV_SET_HDR(&cmd->tlv_header,
++        WMI_SET_NFLIMIT_MAX_CMDID_wmi_nflimit_cmd_fixed_param,
++        WMITLV_GET_STRUCT_TLVLEN(wmi_nflimit_cmd_fixed_param));
++    status = wmi_unified_cmd_send(wma_handle->wmi_handle, buf,
++            len, WMI_SET_NFLIMIT_MAX_CMDID);
++    /* Call the wmi api to request the scan */
++    if (status != EOK) {
++        vos_status = VOS_STATUS_E_FAILURE;
++        WMA_LOGE("Failed to send nfLimit");
++        wmi_buf_free(buf);
++    }
++end:
++    return vos_status;
++}
++
++VOS_STATUS wma_thresh62_send(tp_wma_handle wma_handle, wmi_thresh62_fixed_param *param)
++{
++    VOS_STATUS vos_status = VOS_STATUS_SUCCESS;
++    wmi_buf_t buf;
++    wmi_thresh62_fixed_param *cmd;
++    int status = 0;
++    u_int16_t len = sizeof(*cmd);
++    printk("%s\n",__func__);/*Debug*/
++    buf = wmi_buf_alloc(wma_handle->wmi_handle, len);
++    if (NULL == buf) {
++        WMA_LOGE("Failed to allocate memory");
++        vos_status = VOS_STATUS_E_NOMEM;
++        goto end;
++    }
++    cmd = (wmi_thresh62_fixed_param *)wmi_buf_data(buf);
++    cmd->thresh62_val = param->thresh62_val;
++    cmd->is2GHz = param->is2GHz;
++    WMITLV_SET_HDR(&cmd->tlv_header,
++        WMI_SET_THRESH62_CMDID_wmi_thresh62_fixed_param,
++        WMITLV_GET_STRUCT_TLVLEN(wmi_thresh62_fixed_param));
++    status = wmi_unified_cmd_send(wma_handle->wmi_handle, buf,
++            len, WMI_SET_THRESH62_CMDID);
++    /* Call the wmi api to request the scan */
++    if (status != EOK) {
++        vos_status = VOS_STATUS_E_FAILURE;
++        WMA_LOGE("Failed to send thresh62");
++        wmi_buf_free(buf);
++    }
++end:
++    return vos_status;
++}
++#endif
++
+ /* function   : wma_start_scan
+  * Description :
+  * Args       :
+@@ -18157,7 +18245,14 @@ static void wma_process_cli_set_cmd(tp_wma_handle wma,
+ 			}
+ 			break;
+ #endif /* FEATURE_GREEN_AP */
+-
++        case WMI_PDEV_PARAM_BANGRADAR:
++            {
++                struct ath_dfs *dfs = (struct ath_dfs *)wma->dfs_ic->ic_dfs;
++                dfs->dfs_bangradar = 1;
++                dfs->ath_radar_tasksched = 1;
++                OS_SET_TIMER(&dfs->ath_dfs_task_timer, 0);
++            }
++            break;
+ 		default:
+ 			WMA_LOGE("Invalid param id 0x%x", privcmd->param_id);
+ 			break;
+@@ -19427,9 +19522,9 @@ void wma_set_bss_rate_flags(struct wma_txrx_node *iface,
+ 
+ #ifdef WLAN_FEATURE_11AC
+ 	if (add_bss->vhtCapable) {
+-		if (add_bss->vhtTxChannelWidthSet)
++		if (add_bss->vhtTxChannelWidthSet && add_bss->currentExtChannel >=PHY_QUADRUPLE_CHANNEL_20MHZ_LOW_40MHZ_CENTERED)
+ 			iface->rate_flags |= eHAL_TX_RATE_VHT80;
+-		else if (add_bss->txChannelWidthSet)
++		else if (add_bss->txChannelWidthSet && add_bss->currentExtChannel != PHY_SINGLE_CHANNEL_CENTERED)
+ 			iface->rate_flags |= eHAL_TX_RATE_VHT40;
+ 		else
+ 			iface->rate_flags |= eHAL_TX_RATE_VHT20;
+@@ -19438,7 +19533,7 @@ void wma_set_bss_rate_flags(struct wma_txrx_node *iface,
+ 	else
+ #endif
+ 	if (add_bss->htCapable) {
+-		if (add_bss->txChannelWidthSet)
++		if (add_bss->txChannelWidthSet && add_bss->currentExtChannel != PHY_SINGLE_CHANNEL_CENTERED)
+ 			iface->rate_flags |= eHAL_TX_RATE_HT40;
+ 		else
+ 			iface->rate_flags |= eHAL_TX_RATE_HT20;
+@@ -19448,6 +19543,13 @@ void wma_set_bss_rate_flags(struct wma_txrx_node *iface,
+ 		add_bss->staContext.fShortGI40Mhz)
+ 		iface->rate_flags |= eHAL_TX_RATE_SGI;
+ 
++#ifndef NO_SILEX_CHANGE
++	if (((iface->rate_flags & eHAL_TX_RATE_HT20 || iface->rate_flags & eHAL_TX_RATE_VHT20) && add_bss->staContext.fShortGI20Mhz) ||
++		((iface->rate_flags & eHAL_TX_RATE_HT40 || iface->rate_flags & eHAL_TX_RATE_VHT40) && add_bss->staContext.fShortGI40Mhz)) {
++		iface->rate_flags |= eHAL_TX_RATE_SGI_BY_SILEX;
++	}
++#endif
++
+ 	if (!add_bss->htCapable && !add_bss->vhtCapable)
+ 		iface->rate_flags = eHAL_TX_RATE_LEGACY;
+ }
+@@ -19559,6 +19661,8 @@ static void wma_add_bss_sta_mode(tp_wma_handle wma, tpAddBssParams add_bss)
+ 			req.chan = add_bss->currentOperChannel;
+ 			req.chan_offset = add_bss->currentExtChannel;
+ 			req.channelwidth = add_bss->channelwidth;
++			req.vht_capable = add_bss->vhtCapable;
++			req.dot11_mode = add_bss->dot11_mode;
+ 
+ 			if (add_bss->channelwidth == CH_WIDTH_5MHZ)
+ 				req.is_quarter_rate = 1;
+@@ -20857,6 +20961,33 @@ static wmi_buf_t wma_setup_install_key_cmd(tp_wma_handle wma_handle,
+ 	return buf;
+ }
+ 
++/* silex added */
++static void wma_set_stakey_helper(tp_wma_handle wma_handle, struct wma_set_key_params key_params, u_int32_t def_key_idx, ol_txrx_vdev_handle txrx_vdev)
++{
++	wmi_buf_t buf;
++	int32_t status;
++	u_int32_t len = 0;
++
++	WMA_LOGD("BSS key setup for peer");
++
++	key_params.unicast = TRUE;
++	key_params.def_key_idx = def_key_idx;
++
++	buf = wma_setup_install_key_cmd(wma_handle, &key_params, &len, txrx_vdev->opmode);
++
++	if (!buf) {
++		WMA_LOGE("%s:Failed to setup install key buf", __func__);
++		return;
++	}
++
++	status = wmi_unified_cmd_send(wma_handle->wmi_handle, buf, len,
++									WMI_VDEV_INSTALL_KEY_CMDID);
++	if (status) {
++		adf_nbuf_free(buf);
++		WMA_LOGE("%s:Failed to send install key command", __func__);
++	}
++}
++
+ static void wma_set_bsskey(tp_wma_handle wma_handle, tpSetBssKeyParams key_info)
+ {
+ 	struct wma_set_key_params key_params;
+@@ -20963,6 +21094,16 @@ static void wma_set_bsskey(tp_wma_handle wma_handle, tpSetBssKeyParams key_info)
+ 		}
+ 	}
+ 
++	if ( (txrx_vdev->opmode == wlan_op_mode_sta) &&
++		 (key_info->encType == eSIR_ED_WEP40 ||
++		  key_info->encType == eSIR_ED_WEP104) 
++	   )
++	{
++        /* In order not to set default key data because it is already set. */
++		if(wma_handle->cash_def_key_idx != key_params.key_idx){
++		    wma_set_stakey_helper(wma_handle, key_params, wma_handle->cash_def_key_idx, txrx_vdev);
++		}
++	}
+         wma_handle->ibss_started++;
+ 	/* TODO: Should we wait till we get HTT_T2H_MSG_TYPE_SEC_IND? */
+ 	key_info->status = eHAL_STATUS_SUCCESS;
+@@ -21161,6 +21302,12 @@ static void wma_set_stakey(tp_wma_handle wma_handle, tpSetStaKeyParams key_info)
+         if (wlan_op_mode_ibss == txrx_vdev->opmode){
+            wma_set_ibsskey_helper(wma_handle, &wma_handle->ibsskey_info, key_info->peerMacAddr);
+         }
++        else if ( (txrx_vdev->opmode == wlan_op_mode_sta) &&
++                  (key_info->encType == eSIR_ED_WEP40 || key_info->encType == eSIR_ED_WEP104)){
++           WMA_LOGD("%s:cashed default key idx:%d", __func__,key_info->defWEPIdx);
++           wma_handle->cash_def_key_idx = key_info->defWEPIdx;
++           /* Delete the WEP key temporaly when this path passes twice. */
++        }
+ 
+ 	/* TODO: Should we wait till we get HTT_T2H_MSG_TYPE_SEC_IND? */
+ 	key_info->status = eHAL_STATUS_SUCCESS;
+@@ -22858,6 +23005,7 @@ static void wma_enable_sta_ps_mode(tp_wma_handle wma, tpEnablePsParams ps_req)
+ 	ps_req->status = VOS_STATUS_SUCCESS;
+ 	iface->dtimPeriod = ps_req->bcnDtimPeriod;
+ 	iface->in_bmps = true;
++	wma_set_dtim_policy(wma, 0);
+ resp:
+ 	wma_send_msg(wma, WDA_ENTER_BMPS_RSP, ps_req, 0);
+ }
+@@ -22900,6 +23048,7 @@ static void wma_disable_sta_ps_mode(tp_wma_handle wma, tpDisablePsParams ps_req)
+ 
+         ps_req->status = VOS_STATUS_SUCCESS;
+ 	iface->in_bmps = false;
++	wma_set_dtim_policy(wma, STICK_DTIM);
+ resp:
+         wma_send_msg(wma, WDA_EXIT_BMPS_RSP, ps_req, 0);
+ }
+@@ -36121,6 +36270,19 @@ VOS_STATUS wma_mc_process_msg(v_VOID_t *vos_context, vos_msg_t *msg)
+ 						  (struct audio_multicast_group *) msg->bodyptr);
+ 			vos_mem_free(msg->bodyptr);
+ 			break;
++#endif
++		case WDA_WLAN_DTIM_POLICY:
++			wma_set_dtim_policy(wma_handle, msg->bodyval);
++			break;
++#if 1
++		case WDA_NFLIMIT_SET_CMD:
++			wma_nflimit_send(wma_handle,
++						  (wmi_nflimit_cmd_fixed_param *)msg->bodyptr);
++            break;
++		case WDA_SET_THRESH62_CMD:
++			wma_thresh62_send(wma_handle,
++						  (wmi_thresh62_fixed_param *)msg->bodyptr);
++            break;
+ #endif
+ 		default:
+ 			WMA_LOGD("unknow msg type %x", msg->type);
+@@ -39204,6 +39366,9 @@ v_VOID_t wma_rx_ready_event(WMA_HANDLE handle, void *cmd_param_info)
+ 	tp_wma_handle wma_handle = (tp_wma_handle) handle;
+ 	WMI_READY_EVENTID_param_tlvs *param_buf = NULL;
+ 	wmi_ready_event_fixed_param  *ev = NULL;
++	void *hdd_ctx = vos_get_context(VOS_MODULE_ID_HDD,
++					wma_handle->vos_context);
++	int ret;
+ 
+ 	WMA_LOGD("%s: Enter", __func__);
+ 
+@@ -39271,6 +39436,12 @@ v_VOID_t wma_rx_ready_event(WMA_HANDLE handle, void *cmd_param_info)
+ 
+ 	wma_update_hdd_cfg(wma_handle);
+ 
++	ret = wmi_unified_pdev_set_param(wma_handle->wmi_handle,
++                                     WMI_SET_ANTENNA_DIVERSITY_CMDID,
++                                     (u_int32_t)vos_get_antenna_setting(hdd_ctx));
++	if (ret) {
++		WMA_LOGD("wmi_unified_vdev_set_param_send failed ret %d", ret);
++	}
+ 	vos_event_set(&wma_handle->wma_ready_event);
+ 
+ 	WMA_LOGD("Exit");
+@@ -40711,6 +40882,8 @@ void wma_send_regdomain_info(u_int32_t reg_dmn, u_int16_t regdmn2G,
+ 	int32_t cck_mask_val = 0;
+ 	int ret = 0;
+ 
++        WMA_LOGE("reg dmn info: 0x%x, 0x%x, 0x%x, 0x%x, 0x%x\n", reg_dmn, regdmn2G, regdmn5G, ctl2G, ctl5G);
++
+ 	if (NULL == wma) {
+ 		WMA_LOGE("%s: wma context is NULL", __func__);
+ 		return;
+@@ -41678,8 +41851,9 @@ int wma_dfs_indicate_radar(struct ieee80211com *ic,
+ 	if (!pmac->sap.SapDfsInfo.disable_dfs_ch_switch)
+ 		wma->dfs_ic->disable_phy_err_processing = true;
+ 
+-	if ((ichan->ic_ieee  != (wma->dfs_ic->last_radar_found_chan)) ||
+-	    ( pmac->sap.SapDfsInfo.disable_dfs_ch_switch == VOS_TRUE) )
++	if (((ichan->ic_ieee  != (wma->dfs_ic->last_radar_found_chan)) ||
++	    ( pmac->sap.SapDfsInfo.disable_dfs_ch_switch == VOS_TRUE) ) &&
++        (!pmac->sap.SapDfsInfo.dfs_full))
+ 	{
+ 		radar_event = (struct wma_dfs_radar_indication *)
+ 			vos_mem_malloc(sizeof(*radar_event));
+@@ -42192,6 +42366,47 @@ static void wma_set_resume_dtim(tp_wma_handle wma)
+ 	}
+ }
+ 
++static void wma_set_vdev_dtim_policy(tp_wma_handle wma, v_U8_t vdev_id, uint8_t dtim_policy)
++{
++	struct wma_txrx_node *iface = &wma->interfaces[vdev_id];
++	BEACON_DTIM_POLICY dtim_p = wma->dtim_policy;
++	int32_t ret;
++
++	if (dtim_policy) {
++		/* Set dtim policy by Powersave Enabled/Disabled */
++		dtim_p = dtim_policy;
++	}
++
++	ret = wmi_unified_vdev_set_param_send(wma->wmi_handle, vdev_id,
++						WMI_VDEV_PARAM_DTIM_POLICY ,
++						dtim_p);
++	if (ret) {
++		/* Set it to Normal DTIM */
++		WMA_LOGE("Failed to Set to DTIM Policy(%d) vdevId %d", dtim_p, vdev_id);
++	}
++
++	iface->dtim_policy = dtim_p;
++	WMA_LOGD("Set DTIM Policy to Dtim Policy(%d) vdevId %d", dtim_p, vdev_id);
++}
++
++void wma_set_dtim_policy(tp_wma_handle wma, uint8_t val)
++{
++	u_int8_t i;
++
++	if (NULL == wma) {
++		WMA_LOGE("%s: wma is NULL", __func__);
++		return;
++	}
++
++	for (i = 0; i < wma->max_bssid; i++) {
++		if (wma->interfaces[i].handle) {
++			wma_set_vdev_dtim_policy(wma, i, val);
++		}
++	}
++
++	return;
++}
++
+ #ifdef WLAN_FEATURE_ROAM_OFFLOAD
+ void wma_process_roam_synch_complete(WMA_HANDLE handle,
+ 		tSirSmeRoamOffloadSynchCnf *synchcnf)
+diff --git a/CORE/SERVICES/WMA/wma.h b/CORE/SERVICES/WMA/wma.h
+old mode 100644
+new mode 100755
+index 638286a..b418dc5
+--- a/CORE/SERVICES/WMA/wma.h
++++ b/CORE/SERVICES/WMA/wma.h
+@@ -867,6 +867,7 @@ typedef struct wma_handle {
+ #endif
+         u_int8_t ibss_started;
+         tSetBssKeyParams ibsskey_info;
++	u_int32_t cash_def_key_idx;
+ 
+    /*DFS umac interface information*/
+    struct ieee80211com *dfs_ic;
+@@ -922,6 +923,7 @@ typedef struct wma_handle {
+ 	u_int8_t staMaxLIModDtim;
+ 	u_int8_t staModDtim;
+ 	u_int8_t staDynamicDtim;
++	BEACON_DTIM_POLICY dtim_policy;
+ 
+ 	u_int8_t enable_mhf_offload;
+ 	/* timestamp when last entries where set */
+diff --git a/CORE/SERVICES/WMI/wmi_unified.c b/CORE/SERVICES/WMI/wmi_unified.c
+index 439078c..1dc7f31 100644
+--- a/CORE/SERVICES/WMI/wmi_unified.c
++++ b/CORE/SERVICES/WMI/wmi_unified.c
+@@ -503,6 +503,10 @@ static u_int8_t* get_wmi_cmd_string(WMI_CMD_ID wmi_command)
+                 CASE_RETURN_STRING(WMI_ROAM_CONFIGURE_MAWC_CMDID);
+                 CASE_RETURN_STRING(WMI_NLO_CONFIGURE_MAWC_CMDID);
+                 CASE_RETURN_STRING(WMI_EXTSCAN_CONFIGURE_MAWC_CMDID);
++#if 1
++        CASE_RETURN_STRING(WMI_SET_NFLIMIT_MAX_CMDID);
++        CASE_RETURN_STRING(WMI_SET_THRESH62_CMDID);
++#endif
+ 		/* GPIO Configuration */
+ 		CASE_RETURN_STRING(WMI_GPIO_CONFIG_CMDID);
+ 		CASE_RETURN_STRING(WMI_GPIO_OUTPUT_CMDID);
+diff --git a/CORE/SME/inc/csrApi.h b/CORE/SME/inc/csrApi.h
+index a2cde95..21aaeee 100644
+--- a/CORE/SME/inc/csrApi.h
++++ b/CORE/SME/inc/csrApi.h
+@@ -570,6 +570,8 @@ typedef enum
+     eCSR_ROAM_NDP_STATUS_UPDATE,
+     eCSR_ROAM_UPDATE_SCAN_RESULT,
+     eCSR_ROAM_SAE_COMPUTE,
++
++	eCSR_ROAM_STA_CHANNEL_SW_RSP,
+ }eRoamCmdStatus;
+ 
+ 
+diff --git a/CORE/SME/inc/smeInternal.h b/CORE/SME/inc/smeInternal.h
+index 4e6d198..52144ab 100644
+--- a/CORE/SME/inc/smeInternal.h
++++ b/CORE/SME/inc/smeInternal.h
+@@ -232,6 +232,9 @@ typedef struct tagSmeStruct
+     int (*get_tsf_cb)(void *pcb_cxt, struct stsf *ptsf);
+     void *get_tsf_cxt;
+ 
++    void (*set_dfs_csr_block_tx)(void *hdd_context, bool val);
++    boolean is_dfs_csr_inprogress;
++
+     v_BOOL_t enableSelfRecovery;
+     tCsrLinkStatusCallback linkStatusCallback;
+     void *linkStatusContext;
+diff --git a/CORE/SME/inc/sme_Api.h b/CORE/SME/inc/sme_Api.h
+index 42e7422..80e705b 100644
+--- a/CORE/SME/inc/sme_Api.h
++++ b/CORE/SME/inc/sme_Api.h
+@@ -4636,6 +4636,10 @@ VOS_STATUS sme_set_btc_coex_dutycycle(uint32_t coex_btc_PauseDuration,uint32_t c
+ 
+ uint8_t    sme_is_any_session_in_connected_state(tHalHandle h_hal);
+ 
++typedef void (*tSmeSetCsrBlockTxCallback)(void *pContext, bool val);
++void sme_set_dfs_csr_callback(tHalHandle hHal,
++                   tSmeSetCsrBlockTxCallback cb);
++
+ typedef void ( *tSmeSetThermalLevelCallback)(void *pContext, u_int8_t level);
+ void sme_add_set_thermal_level_callback(tHalHandle hHal,
+                    tSmeSetThermalLevelCallback callback);
+diff --git a/CORE/SME/src/csr/csrApiRoam.c b/CORE/SME/src/csr/csrApiRoam.c
+index 1976db9..4d8530d 100644
+--- a/CORE/SME/src/csr/csrApiRoam.c
++++ b/CORE/SME/src/csr/csrApiRoam.c
+@@ -2645,6 +2645,10 @@ VOS_STATUS csrIsValidChannel(tpAniSirGlobal pMac, tANI_U8 chnNum)
+           if ((dfsChan->dfs_channel_number == chnNum) &&
+                 (dfsChan->radar_status_flag == eSAP_DFS_CHANNEL_UNAVAILABLE))
+           {
++             if (pMac->sap.SapDfsInfo.dfs_full) {
++                 break;
++             }
++
+              VOS_TRACE(VOS_MODULE_ID_SME, VOS_TRACE_LEVEL_ERROR,
+                    FL("channel %d is in dfs nol"),
+                    chnNum);
+@@ -3485,6 +3489,11 @@ eHalStatus csrRoamIssueDeauth( tpAniSirGlobal pMac, tANI_U32 sessionId, eCsrRoam
+                                 MAC_ADDRESS_STR ), status, sessionId, MAC_ADDR_ARRAY(bssId));
+     }
+ 
++#if 1
++/* add for clearing connection profile by silex */
++    csrRoamLinkDown(pMac, sessionId);
++#endif
++
+     return (status);
+ }
+ 
+@@ -4746,6 +4755,7 @@ eHalStatus csrRoamShouldRoam(tpAniSirGlobal pMac, tANI_U32 sessionId,
+ 	roam_info = vos_mem_malloc(sizeof(*roam_info));
+ 	if (!roam_info)
+ 		return eHAL_STATUS_FAILED_ALLOC;
++    vos_mem_zero(roam_info, sizeof(*roam_info));
+ 	roam_info->pBssDesc = pBssDesc;
+ 	status = csrRoamCallCallback(pMac, sessionId, roam_info, roamId,
+ 				     eCSR_ROAM_SHOULD_ROAM,
+@@ -4841,6 +4851,7 @@ static eCsrJoinState csrRoamJoinNextBss( tpAniSirGlobal pMac, tSmeCmd *pCommand,
+         // Check for Cardbus eject condition, before trying to Roam to any BSS
+         //***if( !balIsCardPresent(pAdapter) ) break;
+ 
++        vos_mem_zero(roam_info, sizeof(*roam_info));
+         vos_mem_copy(roam_info->bssid, &pSession->joinFailStatusCode.bssId,
+                      sizeof(tSirMacAddr));
+         if(NULL != pBSSList)
+@@ -8806,6 +8817,7 @@ void csrRoamReissueRoamCommand(tpAniSirGlobal pMac)
+                 roam_info = vos_mem_malloc(sizeof(*roam_info));
+                 if (!roam_info)
+                     return;
++                vos_mem_zero(roam_info, sizeof(*roam_info));
+                 roam_info->pBssDesc = pCommand->u.roamCmd.pLastRoamBss;
+                 roam_info->statusCode = pSession->joinFailStatusCode.statusCode;
+                 roam_info->reasonCode = pSession->joinFailStatusCode.reasonCode;
+@@ -9294,6 +9306,7 @@ static void csrRoamRoamingStateReassocRspProcessor( tpAniSirGlobal pMac, tpSirSm
+                     roam_info = vos_mem_malloc(sizeof(*roam_info));
+                     if (!roam_info)
+                         return;
++                    vos_mem_zero(roam_info, sizeof(*roam_info));
+                     csrRoamCallCallback(pMac, pSmeJoinRsp->sessionId, roam_info,
+                                         roam_id, eCSR_ROAM_FT_REASSOC_FAILED,
+                                         eSIR_SME_SUCCESS);
+@@ -9762,6 +9775,7 @@ void csrRoamingStateMsgProcessor( tpAniSirGlobal pMac, void *pMsgBuf )
+             roam_info = vos_mem_malloc(sizeof(*roam_info));
+             if (!roam_info)
+                 break;
++            vos_mem_zero(roam_info, sizeof(*roam_info));
+             roam_info->staId = (tANI_U8)pIbssPeerInd->staId;
+             roam_info->ucastSig = (tANI_U8)pIbssPeerInd->ucastSig;
+             roam_info->bcastSig = (tANI_U8)pIbssPeerInd->bcastSig;
+@@ -9844,6 +9858,7 @@ void csrRoamJoinedStateMsgProcessor( tpAniSirGlobal pMac, void *pMsgBuf )
+                     vos_mem_free(pUpperLayerAssocCnf->ies);
+                 return;
+             }
++            vos_mem_zero(roam_info, sizeof(*roam_info));
+             roam_info->statusCode = eSIR_SME_SUCCESS; //send the status code as Success
+             roam_info->u.pConnectedProfile = &pSession->connectedProfile;
+             roam_info->staId = (tANI_U8)pUpperLayerAssocCnf->aid;
+@@ -11344,6 +11359,19 @@ void csrRoamCheckForLinkStatusChange( tpAniSirGlobal pMac, tSirSmeRsp *pSirMsg )
+                 {
+                     pSession->pConnectBssDesc->channelId = (tANI_U8)pSwitchChnInd->newChannelId;
+                 }
++
++                /* notify channel switch to kernel in case of STA */
++                if (CSR_IS_INFRASTRUCTURE(&pSession->connectedProfile) && pSession->pConnectBssDesc)
++                {
++                    pRoamInfo->pBssDesc = vos_mem_malloc(sizeof(tSirBssDescription));
++                    if (pRoamInfo->pBssDesc)
++                    {
++                        vos_mem_copy(pRoamInfo->pBssDesc, pSession->pConnectBssDesc, sizeof(tSirBssDescription));
++                        smsLog(pMac, LOGW, FL("channel switch callback: channel=%u"), pRoamInfo->pBssDesc->channelId);
++                        csrRoamCallCallback(pMac, sessionId, pRoamInfo, 0, eCSR_ROAM_STA_CHANNEL_SW_RSP, eCSR_ROAM_RESULT_NONE);
++                        vos_mem_free(pRoamInfo->pBssDesc);
++                    }
++                }
+             }
+             break;
+ 
+@@ -12450,6 +12478,7 @@ eHalStatus csrRoamLostLink( tpAniSirGlobal pMac, tANI_U32 sessionId, tANI_U32 ty
+     }
+ 
+     //prepare to tell HDD to disconnect
++    vos_mem_zero(roam_info, sizeof(*roam_info));
+     roam_info->statusCode = (tSirResultCodes)pSession->roamingStatusCode;
+     roam_info->reasonCode = pSession->joinFailStatusCode.reasonCode;
+     if( eWNI_SME_DISASSOC_IND == type)
+@@ -16598,6 +16627,7 @@ static eHalStatus csrRoamSessionOpened(tpAniSirGlobal pMac, tANI_U32 sessionId)
+     roam_info = vos_mem_malloc(sizeof(*roam_info));
+     if (!roam_info)
+         return eHAL_STATUS_FAILED_ALLOC;
++    vos_mem_zero(roam_info, sizeof(*roam_info));
+ 
+     status = csrRoamCallCallback(pMac, sessionId, roam_info, 0,
+                             eCSR_ROAM_SESSION_OPENED, eCSR_ROAM_RESULT_NONE);
+@@ -18022,12 +18052,6 @@ eHalStatus csrGetStatistics(tpAniSirGlobal pMac, eCsrStatsRequesterType requeste
+       return eHAL_STATUS_FAILURE;
+    }
+ 
+-   if (csrNeighborMiddleOfRoaming((tHalHandle)pMac, sessionId))
+-   {
+-       smsLog(pMac, LOG1, FL("in the middle of roaming states"));
+-       return eHAL_STATUS_FAILURE;
+-   }
+-
+    if((!statsMask) && (!callback))
+    {
+       //msg
+diff --git a/CORE/SME/src/csr/csrApiScan.c b/CORE/SME/src/csr/csrApiScan.c
+index 584e250..c73d7b6 100644
+--- a/CORE/SME/src/csr/csrApiScan.c
++++ b/CORE/SME/src/csr/csrApiScan.c
+@@ -2730,6 +2730,7 @@ eHalStatus csrScanningStateMsgProcessor( tpAniSirGlobal pMac, void *pMsgBuf )
+ 		roam_info = vos_mem_malloc(sizeof(*roam_info));
+ 		if (!roam_info)
+ 			return eHAL_STATUS_FAILED_ALLOC;
++        vos_mem_zero(roam_info, sizeof(*roam_info));
+ 		switch (pMsg->type) {
+ 		case eWNI_SME_UPPER_LAYER_ASSOC_CNF:
+ 		{
+diff --git a/CORE/SME/src/csr/csrNeighborRoam.c b/CORE/SME/src/csr/csrNeighborRoam.c
+index c284ff2..f6b77a9 100644
+--- a/CORE/SME/src/csr/csrNeighborRoam.c
++++ b/CORE/SME/src/csr/csrNeighborRoam.c
+@@ -3361,10 +3361,11 @@ eHalStatus csrNeighborRoamPerformContiguousBgScan(tpAniSirGlobal pMac,
+ {
+     eHalStatus      status = eHAL_STATUS_SUCCESS;
+     tCsrBGScanRequest   bgScanParams;
+-    tANI_U8   numOfChannels = 0, i = 0;
++    tANI_U8   i = 0;
+     tANI_U8   *channelList = NULL;
+     tANI_U8   *pInChannelList = NULL;
+-    tANI_U8   tmpChannelList[WNI_CFG_VALID_CHANNEL_LIST_LEN];
++    tANI_U8   tmpChannelList[WNI_CFG_VALID_CHANNEL_LIST_LEN]= {0,};
++    tANI_U32  numOfChannels = 0;
+ 
+     vos_mem_set(&bgScanParams, sizeof(tCsrBGScanRequest), 0);
+ 
+@@ -3375,7 +3376,7 @@ eHalStatus csrNeighborRoamPerformContiguousBgScan(tpAniSirGlobal pMac,
+ 
+     if(!HAL_STATUS_SUCCESS(csrGetCfgValidChannels(pMac,
+                           (tANI_U8 *)pMac->roam.validChannelList,
+-                          (tANI_U32 *) &numOfChannels)))
++                          &numOfChannels)))
+     {
+         smsLog(pMac, LOGE, FL("Could not get valid channel list"));
+         return eHAL_STATUS_FAILURE;
+@@ -3390,7 +3391,7 @@ eHalStatus csrNeighborRoamPerformContiguousBgScan(tpAniSirGlobal pMac,
+                              pInChannelList,
+                              numOfChannels,
+                              tmpChannelList,
+-                             &numOfChannels);
++                             (tANI_U8 *)&numOfChannels);
+         pInChannelList = tmpChannelList;
+     }
+ 
+@@ -4324,6 +4325,12 @@ VOS_STATUS csrNeighborRoamTransitToCFGChanScan(tpAniSirGlobal pMac,
+ 
+     currChannelListInfo = &pNeighborRoamInfo->roamChannelInfo.currentChannelListInfo;
+ 
++    if (sessionId>=CSR_ROAM_SESSION_MAX)
++    {
++        smsLog(pMac, LOGE, FL("Session ID is invalid(%d)"),sessionId);
++        return VOS_STATUS_E_INVAL;
++    }
++
+     if (
+ #ifdef FEATURE_WLAN_ESE
+         ((pNeighborRoamInfo->isESEAssoc) &&
+diff --git a/CORE/SME/src/csr/csrTdlsProcess.c b/CORE/SME/src/csr/csrTdlsProcess.c
+index 443390b..33cf3ef 100644
+--- a/CORE/SME/src/csr/csrTdlsProcess.c
++++ b/CORE/SME/src/csr/csrTdlsProcess.c
+@@ -698,6 +698,7 @@ eHalStatus tdlsMsgProcessor(tpAniSirGlobal pMac,  v_U16_t msgType,
+     roam_info = vos_mem_malloc(sizeof(*roam_info));
+     if (!roam_info)
+         return eHAL_STATUS_FAILED_ALLOC;
++    vos_mem_zero(roam_info, sizeof(*roam_info));
+ 
+     switch(msgType)
+     {
+diff --git a/CORE/SME/src/csr/csrUtil.c b/CORE/SME/src/csr/csrUtil.c
+index 512cccf..7de99b8 100644
+--- a/CORE/SME/src/csr/csrUtil.c
++++ b/CORE/SME/src/csr/csrUtil.c
+@@ -5734,6 +5734,15 @@ tANI_BOOLEAN csrMatchBSS( tHalHandle hHal, tSirBssDescription *pBssDesc, tCsrSca
+             }
+             if(!fCheck) break;
+         }
++
++#ifndef NO_SILEX_CHANGE
++        /* If there is no SSID IE, treat it as "not matched". */
++        else
++        {
++            break;
++        }
++#endif /* NO_SILEX_CHANGE */
++
+         fCheck = eANI_BOOLEAN_TRUE;
+         for(i = 0; i < pFilter->BSSIDs.numOfBSSIDs; i++)
+         {
+diff --git a/CORE/SME/src/nan/nan_datapath_api.c b/CORE/SME/src/nan/nan_datapath_api.c
+index 63e9b81..215a785 100644
+--- a/CORE/SME/src/nan/nan_datapath_api.c
++++ b/CORE/SME/src/nan/nan_datapath_api.c
+@@ -634,6 +634,7 @@ void sme_ndp_msg_processor(tpAniSirGlobal mac_ctx, vos_msg_t *msg)
+ 	roam_info = vos_mem_malloc(sizeof(*roam_info));
+ 	if (!roam_info)
+ 		return;
++	vos_mem_zero(roam_info, sizeof(*roam_info));
+ 
+ 	switch (msg->type) {
+ 	case eWNI_SME_NDP_CONFIRM_IND: {
+diff --git a/CORE/SME/src/pmc/pmc.c b/CORE/SME/src/pmc/pmc.c
+index 838f9e6..c7a76bc 100644
+--- a/CORE/SME/src/pmc/pmc.c
++++ b/CORE/SME/src/pmc/pmc.c
+@@ -3220,7 +3220,11 @@ void pmcOffloadAutoPsEntryTimerExpired(void *pmcInfo)
+ 
+     smsLog(pMac, LOG2, FL("Auto PS timer expired"));
+ 
+-    if(eHAL_STATUS_FAILURE == pmcOffloadEnableStaPsHandler(pMac,
++    if(!pmc->configStaPsEnabled)
++    {
++        vos_timer_stop(&pmc->autoPsEnableTimer);
++    }
++    else if(eHAL_STATUS_FAILURE == pmcOffloadEnableStaPsHandler(pMac,
+                                                 pmc->sessionId))
+     {
+         smsLog(pMac, LOGE, FL("Auto PS timer expired in wrong state"));
+diff --git a/CORE/SME/src/pmc/pmcApi.c b/CORE/SME/src/pmc/pmcApi.c
+index 0bf93a9..6e7949d 100644
+--- a/CORE/SME/src/pmc/pmcApi.c
++++ b/CORE/SME/src/pmc/pmcApi.c
+@@ -3581,6 +3581,8 @@ eHalStatus PmcOffloadEnableStaModePowerSave(tHalHandle hHal,
+     if(!pmc->configStaPsEnabled)
+     {
+         eHalStatus status;
++
++        pmc->configStaPsEnabled = TRUE;
+         status = pmcOffloadEnableStaPsHandler(pMac, sessionId);
+ 
+         if((eHAL_STATUS_SUCCESS == status) ||
+@@ -3590,7 +3592,6 @@ eHalStatus PmcOffloadEnableStaModePowerSave(tHalHandle hHal,
+             smsLog(pMac, LOG2,
+                    FL("Successful Queued Enabling Sta Mode Ps Request"));
+ 
+-            pmc->configStaPsEnabled = TRUE;
+             return eHAL_STATUS_SUCCESS;
+         }
+         else
+@@ -3643,6 +3644,7 @@ eHalStatus PmcOffloadDisableStaModePowerSave(tHalHandle hHal,
+             /* Add entry to list. */
+             csrLLInsertTail(&pmc->fullPowerCbList, &power_entry->link, FALSE);
+         }
++        pmc->configStaPsEnabled = FALSE;
+         status = pmcOffloadDisableStaPsHandler(pMac, sessionId);
+         if ((eHAL_STATUS_SUCCESS != status) && callback_routine) {
+             pEntry = csrLLRemoveTail(&pmc->fullPowerCbList, TRUE);
+@@ -4164,6 +4166,14 @@ eHalStatus PmcOffloadEnableDeferredStaModePowerSave(tHalHandle hHal,
+     eHalStatus status = eHAL_STATUS_FAILURE;
+     tANI_U32 timer_value;
+ 
++    if (!pmc->configStaPsEnabled)
++    {
++        smsLog(pMac, LOGE,
++               FL("STA Mode Config PowerSave is not enabled"));
++       return status;
++    }
++
++
+     if (!pMac->pmcOffloadInfo.staPsEnabled)
+     {
+         smsLog(pMac, LOGE,
+diff --git a/CORE/SME/src/sme_common/sme_Api.c b/CORE/SME/src/sme_common/sme_Api.c
+index 623632a..af86757 100644
+--- a/CORE/SME/src/sme_common/sme_Api.c
++++ b/CORE/SME/src/sme_common/sme_Api.c
+@@ -2462,6 +2462,7 @@ eHalStatus sme_UnprotectedMgmtFrmInd( tHalHandle hHal,
+ 	roam_info = vos_mem_malloc(sizeof(*roam_info));
+ 	if (!roam_info)
+ 		return eHAL_STATUS_FAILED_ALLOC;
++    vos_mem_zero(roam_info, sizeof(*roam_info));
+ 	roam_info->nFrameLength = pSmeMgmtFrm->frameLen;
+ 	roam_info->pbFrames = pSmeMgmtFrm->frameBuf;
+ 	roam_info->frameType = pSmeMgmtFrm->frameType;
+@@ -2494,6 +2495,7 @@ eHalStatus dfsMsgProcessor(tpAniSirGlobal pMac, v_U16_t msgType, void *pMsgBuf)
+     roam_info = vos_mem_malloc(sizeof(*roam_info));
+     if (!roam_info)
+         return eHAL_STATUS_FAILED_ALLOC;
++    vos_mem_zero(roam_info, sizeof(*roam_info));
+ 
+     switch (msgType)
+     {
+@@ -2596,6 +2598,7 @@ static eHalStatus sme_extended_change_channel_ind(tpAniSirGlobal mac_ctx,
+ 	roam_info = vos_mem_malloc(sizeof(*roam_info));
+ 	if (!roam_info)
+ 		return eHAL_STATUS_FAILED_ALLOC;
++    vos_mem_zero(roam_info, sizeof(*roam_info));
+ 	session_id = ext_chan_ind->session_id;
+ 	roam_info->target_channel = ext_chan_ind->new_channel;
+ 	roamStatus = eCSR_ROAM_EXT_CHG_CHNL_IND;
+@@ -2628,6 +2631,7 @@ eHalStatus sme_TsmIeInd(tHalHandle hHal, tSirSmeTsmIEInd *pSmeTsmIeInd)
+ 	roam_info = vos_mem_malloc(sizeof(*roam_info));
+ 	if (!roam_info)
+ 		return eHAL_STATUS_FAILED_ALLOC;
++    vos_mem_zero(roam_info, sizeof(*roam_info));
+ 	roam_info->tsmIe.tsid= pSmeTsmIeInd->tsmIe.tsid;
+ 	roam_info->tsmIe.state= pSmeTsmIeInd->tsmIe.state;
+ 	roam_info->tsmIe.msmt_interval= pSmeTsmIeInd->tsmIe.msmt_interval;
+@@ -15563,6 +15567,15 @@ eHalStatus sme_InitDPDRecalInfo( tHalHandle hHal,
+     return eHAL_STATUS_FAILURE;
+ }
+ 
++void sme_set_dfs_csr_callback(tHalHandle hHal,
++                   tSmeSetCsrBlockTxCallback cb)
++{
++    tpAniSirGlobal pMac = PMAC_STRUCT(hHal);
++
++    pMac->sme.set_dfs_csr_block_tx= cb;
++    pMac->sme.is_dfs_csr_inprogress = false;
++}
++
+ /*
+  * Plug in set thermal level callback
+  */
+diff --git a/CORE/SYS/legacy/src/utils/src/macTrace.c b/CORE/SYS/legacy/src/utils/src/macTrace.c
+old mode 100644
+new mode 100755
+index cc21f2a..7d26d9c
+--- a/CORE/SYS/legacy/src/utils/src/macTrace.c
++++ b/CORE/SYS/legacy/src/utils/src/macTrace.c
+@@ -801,6 +801,7 @@ tANI_U8* macTraceGetWdaMsgString(tANI_U16 wdaMsg)
+ 	CASE_RETURN_STRING(WDA_TIMER_TRAFFIC_STATS_IND);
+ 	CASE_RETURN_STRING(WDA_WLAN_SUSPEND_IND);
+ 	CASE_RETURN_STRING(WDA_WLAN_RESUME_REQ);
++	CASE_RETURN_STRING(WDA_WLAN_DTIM_POLICY);
+ #ifdef WLAN_FEATURE_EXTWOW_SUPPORT
+ 	CASE_RETURN_STRING(WDA_WLAN_EXT_WOW);
+ 	CASE_RETURN_STRING(WDA_WLAN_SET_APP_TYPE1_PARAMS);
+diff --git a/CORE/UTILS/FWLOG/dbglog_host.c b/CORE/UTILS/FWLOG/dbglog_host.c
+index 35390e1..44545df 100644
+--- a/CORE/UTILS/FWLOG/dbglog_host.c
++++ b/CORE/UTILS/FWLOG/dbglog_host.c
+@@ -4951,7 +4951,7 @@ int create_peer_cfr_debug_entry(tp_wma_handle wma, void *buf)
+     debugfs_create_file(CFR_DEBUGFS_CAPT, 0644 , peer->cfr_peer_mac,
+                         peer, &fops_cfr_capture);
+ 
+-    AR_DEBUG_PRINTF(ATH_DEBUG_INFO, ("DEBUGFS PEER MAC = 0x%x:0x%x:0x%x:0x%x:0x%x:0x%x",
++    AR_DEBUG_PRINTF(ATH_DEBUG_INFO, ("DEBUGFS PEER MAC = 0x%x:0x%x:0x%x:0x%x:0x%x:0x%x\n",
+                                       peer->mac_addr.raw[0], peer->mac_addr.raw[1],
+                                       peer->mac_addr.raw[2], peer->mac_addr.raw[3],
+                                       peer->mac_addr.raw[4], peer->mac_addr.raw[5]));
+diff --git a/CORE/VOSS/inc/vos_api.h b/CORE/VOSS/inc/vos_api.h
+index b98a97a..11b1c74 100644
+--- a/CORE/VOSS/inc/vos_api.h
++++ b/CORE/VOSS/inc/vos_api.h
+@@ -447,4 +447,6 @@ int qca_request_firmware(const struct firmware **firmware_p,
+                 const char *name,
+                 struct device *device);
+ 
++v_U32_t vos_get_antenna_setting(void *hdd_ctx);
++
+ #endif // if !defined __VOS_API_H
+diff --git a/CORE/VOSS/inc/vos_cnss.h b/CORE/VOSS/inc/vos_cnss.h
+index af55821..a3b2d26 100644
+--- a/CORE/VOSS/inc/vos_cnss.h
++++ b/CORE/VOSS/inc/vos_cnss.h
+@@ -41,6 +41,9 @@
+ #include <linux/jiffies.h>
+ #include <linux/workqueue.h>
+ #include <linux/sched.h>
++#ifdef HIF_PCI
++#include <linux/pci.h>
++#endif
+ 
+ enum cnss_bus_width_type {
+ 	CNSS_BUS_WIDTH_NONE,
+diff --git a/CORE/VOSS/src/vos_api.c b/CORE/VOSS/src/vos_api.c
+old mode 100644
+new mode 100755
+index e32a4af..8c3915d
+--- a/CORE/VOSS/src/vos_api.c
++++ b/CORE/VOSS/src/vos_api.c
+@@ -620,6 +620,7 @@ VOS_STATUS vos_open( v_CONTEXT_t *pVosContext, v_SIZE_t hddContextSize )
+    macOpenParms.staMaxLIModDtim = pHddCtx->cfg_ini->fMaxLIModulatedDTIM;
+    macOpenParms.wowEnable          = pHddCtx->cfg_ini->wowEnable;
+    macOpenParms.maxWoWFilters      = pHddCtx->cfg_ini->maxWoWFilters;
++   macOpenParms.staDTIMPolicy      = pHddCtx->cfg_ini->dtim_policy;
+   /* Here olIniInfo is used to store ini status of arp offload
+    * ns offload and others. Currently 1st bit is used for arp
+    * off load and 2nd bit for ns offload currently, rest bits are unused
+@@ -3606,3 +3607,9 @@ int qca_request_firmware(const struct firmware **firmware_p,
+ #endif
+ }
+ 
++v_U32_t vos_get_antenna_setting(void *hdd_ctx)
++{
++    hdd_context_t *pHddCtx = (hdd_context_t *)hdd_ctx;
++    return pHddCtx->cfg_ini->antennaDiversity;
++}
++
+diff --git a/CORE/VOSS/src/vos_nvitem.c b/CORE/VOSS/src/vos_nvitem.c
+index b22162d..3d3df1c 100644
+--- a/CORE/VOSS/src/vos_nvitem.c
++++ b/CORE/VOSS/src/vos_nvitem.c
+@@ -277,9 +277,11 @@ chan_to_ht_40_index_map chan_to_ht_40_index[NUM_20MHZ_RF_CHANNELS] =
+   {RF_CHAN_BOND_126, RF_CHAN_BOND_130},    //RF_CHAN_128,
+   {RF_CHAN_BOND_130, RF_CHAN_BOND_134},    //RF_CHAN_132,
+   {RF_CHAN_BOND_134, RF_CHAN_BOND_138},    //RF_CHAN_136,
+-  {RF_CHAN_BOND_138, RF_CHAN_BOND_142},    //RF_CHAN_140,
+ #ifdef FEATURE_WLAN_CH144
++  {RF_CHAN_BOND_138, RF_CHAN_BOND_142},    //RF_CHAN_140,
+   {RF_CHAN_BOND_142, INVALID_RF_CHANNEL},  //RF_CHAN_144,
++#else
++  {RF_CHAN_BOND_138, INVALID_RF_CHANNEL},  //RF_CHAN_140,
+ #endif /* FEATURE_WLAN_CH144 */
+   {INVALID_RF_CHANNEL, RF_CHAN_BOND_151},  //RF_CHAN_149,
+   {RF_CHAN_BOND_151, RF_CHAN_BOND_155},    //RF_CHAN_153,
+diff --git a/CORE/VOSS/src/vos_sched.c b/CORE/VOSS/src/vos_sched.c
+index dc89f52..0cebe9a 100644
+--- a/CORE/VOSS/src/vos_sched.c
++++ b/CORE/VOSS/src/vos_sched.c
+@@ -504,7 +504,7 @@ vos_sched_open
+ {
+   VOS_STATUS  vStatus = VOS_STATUS_SUCCESS;
+ #ifdef CONFIG_PERF_NON_QC_PLATFORM
+-  struct sched_param param = {.sched_priority = 99};
++  struct sched_param param  __attribute__((unused))= {.sched_priority = 99};
+ #endif
+ /*-------------------------------------------------------------------------*/
+   VOS_TRACE(VOS_MODULE_ID_VOSS, VOS_TRACE_LEVEL_INFO_HIGH,
+diff --git a/CORE/WDA/inc/wlan_qct_wda.h b/CORE/WDA/inc/wlan_qct_wda.h
+old mode 100644
+new mode 100755
+index 3dbb868..064e4d7
+--- a/CORE/WDA/inc/wlan_qct_wda.h
++++ b/CORE/WDA/inc/wlan_qct_wda.h
+@@ -1069,6 +1069,10 @@ tSirRetStatus uMacPostCtrlMsg(void* pSirGlobal, tSirMbMsg* pMb);
+ #endif /* FEATURE_AP_MCC_CH_AVOIDANCE */
+ 
+ #define WDA_TSF_GPIO_PIN                      SIR_HAL_TSF_GPIO_PIN_REQ
++#if 1
++#define WDA_NFLIMIT_SET_CMD                   SIR_HAL_NFLIMIT_SET_CMD
++#define WDA_SET_THRESH62_CMD                  SIR_HAL_SET_THRESH62_CMD
++#endif
+ #define WDA_SET_RSSI_MONITOR_REQ              SIR_HAL_SET_RSSI_MONITOR_REQ
+ 
+ #define WDA_SET_IE_INFO                       SIR_HAL_SET_IE_INFO
+@@ -1124,6 +1128,9 @@ tSirRetStatus uMacPostCtrlMsg(void* pSirGlobal, tSirMbMsg* pMb);
+ #define WDA_ADD_MULTICAST_GROUP              SIR_HAL_ADD_MULTICAST_GROUP
+ #define WDA_SET_MULTICAST_RATE              SIR_HAL_SET_MULTICAST_RATE
+ #endif
++
++#define WDA_WLAN_DTIM_POLICY                  SIR_HAL_WLAN_DTIM_POLICY
++
+ tSirRetStatus wdaPostCtrlMsg(tpAniSirGlobal pMac, tSirMsgQ *pMsg);
+ 
+ #define HAL_USE_BD_RATE2_FOR_MANAGEMENT_FRAME 0x40 // Bit 6 will be used to control BD rate for Management frames
+diff --git a/Kbuild b/Kbuild
+index bfc5837..70d4c0e 100644
+--- a/Kbuild
++++ b/Kbuild
+@@ -1093,7 +1093,6 @@ CDEFINES :=	-DANI_LITTLE_BYTE_ENDIAN \
+ 		-DWLAN_LOGGING_SOCK_SVC_ENABLE \
+ 		-DFEATURE_WLAN_EXTSCAN \
+ 		-DFEATURE_WLAN_LFR \
+-		-DFEATURE_WLAN_CH144 \
+ 		-DHTC_CRP_DEBUG \
+ 		-DWLAN_VOWIFI_DEBUG \
+ 		-DATH_SUPPORT_DFS \
+@@ -1571,7 +1570,7 @@ CDEFINES += -DQCA_FEATURE_RPS
+ endif
+ 
+ #Enable Channel Matrix restriction for all targets
+-CDEFINES += -DWLAN_ENABLE_CHNL_MATRIX_RESTRICTION
++#CDEFINES += -DWLAN_ENABLE_CHNL_MATRIX_RESTRICTION
+ 
+ #features specific to mobile router use case
+ ifeq ($(CONFIG_MOBILE_ROUTER), y)
+@@ -1617,7 +1616,7 @@ CDEFINES += -DWLAN_OPEN_P2P_INTERFACE
+ endif
+ 
+ #Enable 2.4 GHz social channels in 5 GHz only mode for p2p usage
+-CDEFINES += -DWLAN_ENABLE_SOCIAL_CHANNELS_5G_ONLY
++#CDEFINES += -DWLAN_ENABLE_SOCIAL_CHANNELS_5G_ONLY
+ 
+ endif #CONFIG_MOBILE_ROUTER
+ 
+-- 
+2.14.5
+

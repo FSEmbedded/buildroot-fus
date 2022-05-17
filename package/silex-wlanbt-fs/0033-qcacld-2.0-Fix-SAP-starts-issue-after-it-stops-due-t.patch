@@ -1,0 +1,67 @@
+From 545975450e5365f6adb434f046f8f86fa925912a Mon Sep 17 00:00:00 2001
+Message-Id: <545975450e5365f6adb434f046f8f86fa925912a.1650636481.git.keller@fs-net.de>
+In-Reply-To: <8876d3464f7abe86d96420dca69dd3317368c208.1650636480.git.keller@fs-net.de>
+References: <8876d3464f7abe86d96420dca69dd3317368c208.1650636480.git.keller@fs-net.de>
+From: Brandon Huang <yanghuan@codeaurora.org>
+Date: Mon, 27 Apr 2020 00:32:22 +0800
+Subject: [PATCH 33/56] qcacld-2.0: Fix SAP starts issue after it stops due to
+ no available channel
+
+When SAP starts on DFS channel and detects radar, it will stop BSS if no
+more available channel for switching. But current codes have not cleared
+the SOFTAP_BSS_STARTED bit. After that, hostapd downloads nl80211 command
+to kernel, and calls cfg80211_ops stop_ap or del_beacon in driver. But
+stop_ap or del_beacon returns error as send msg eSAP_HDD_STOP_INFRA_BSS
+in disconnected state. That error causes wdev->beacon_interval is not
+cleared in kernel. When hostapd starts again and beacon_interval is not
+cleared, it requests set_ap_chanwidth while set channel, but it's not
+supported in some projects, which causes hostapd starts fail.
+
+Fix it by clearing SOFTAP_BSS_STARTED bit after calling WLANSAP_StopBss().
+
+Change-Id: I535a143f7ed8b7108324ae0c2cb94316c5f171ee
+CRs-Fixed: 2648097
+---
+ CORE/HDD/src/wlan_hdd_cfg80211.c | 3 +++
+ CORE/SAP/src/sapApiLinkCntl.c    | 6 ++++--
+ 2 files changed, 7 insertions(+), 2 deletions(-)
+
+diff --git a/CORE/HDD/src/wlan_hdd_cfg80211.c b/CORE/HDD/src/wlan_hdd_cfg80211.c
+index 0660d46..67e9369 100644
+--- a/CORE/HDD/src/wlan_hdd_cfg80211.c
++++ b/CORE/HDD/src/wlan_hdd_cfg80211.c
+@@ -19345,6 +19345,9 @@ static int __wlan_hdd_cfg80211_stop_ap (struct wiphy *wiphy,
+         status = hdd_get_next_adapter(pHddCtx, pAdapterNode, &pNext);
+         pAdapterNode = pNext;
+     }
++    /* Status won't be SUCCESS after passing through adapter nodes. Reset it */
++    status = VOS_STATUS_SUCCESS;
++
+     /*
+      * When ever stop ap adapter gets called, we need to check
+      * whether any restart AP work is pending. If any restart is pending
+diff --git a/CORE/SAP/src/sapApiLinkCntl.c b/CORE/SAP/src/sapApiLinkCntl.c
+index 8c7c26d..96be69e 100644
+--- a/CORE/SAP/src/sapApiLinkCntl.c
++++ b/CORE/SAP/src/sapApiLinkCntl.c
+@@ -1,5 +1,5 @@
+ /*
+- * Copyright (c) 2012-2017 The Linux Foundation. All rights reserved.
++ * Copyright (c) 2012-2017,2020 The Linux Foundation. All rights reserved.
+  *
+  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
+  *
+@@ -788,7 +788,9 @@ WLANSAP_RoamCallback
+                         "sapdfs: no available channel for sapctx[%pK], StopBss",
+                                   pSapContext);
+ 
+-                        WLANSAP_StopBss(pSapContext);
++                        sapSignalHDDevent(sapContext, pCsrRoamInfo,
++                                         eSAP_MAC_TRIG_STOP_BSS_EVENT,
++                                         (v_PVOID_t) eSAP_STATUS_SUCCESS );
+                      }
+                }
+                break;
+-- 
+2.14.5
+

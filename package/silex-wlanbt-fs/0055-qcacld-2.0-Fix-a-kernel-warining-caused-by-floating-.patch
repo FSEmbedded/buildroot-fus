@@ -1,0 +1,54 @@
+From 16d6859dca9c4991ac73a66e4938ec6e8f1fa10f Mon Sep 17 00:00:00 2001
+Message-Id: <16d6859dca9c4991ac73a66e4938ec6e8f1fa10f.1650636482.git.keller@fs-net.de>
+In-Reply-To: <8876d3464f7abe86d96420dca69dd3317368c208.1650636480.git.keller@fs-net.de>
+References: <8876d3464f7abe86d96420dca69dd3317368c208.1650636480.git.keller@fs-net.de>
+From: lihual <lihual@codeaurora.org>
+Date: Mon, 19 Jul 2021 11:16:07 +0800
+Subject: [PATCH 55/56] qcacld-2.0: Fix a kernel warining caused by
+ floating-point operation
+
+On some arch platforms, floating-point operation is not support.
+Thus, call function do_div() instead.
+
+Change-Id: Iaef8f5659a60446ba79c09b206169a920ea4d706
+---
+ CORE/CLD_TXRX/TXRX/ol_tx.c | 10 +++++++---
+ 1 file changed, 7 insertions(+), 3 deletions(-)
+
+diff --git a/CORE/CLD_TXRX/TXRX/ol_tx.c b/CORE/CLD_TXRX/TXRX/ol_tx.c
+index 6718664..356d9cd 100644
+--- a/CORE/CLD_TXRX/TXRX/ol_tx.c
++++ b/CORE/CLD_TXRX/TXRX/ol_tx.c
+@@ -49,7 +49,7 @@
+ #include <ol_tx_classify.h>   /* ol_tx_classify, ol_tx_classify_mgmt */
+ #include <ol_tx_queue.h>      /* ol_tx_enqueue */
+ #include <ol_tx_sched.h>      /* ol_tx_sched */
+-
++#include <asm/div64.h>
+ /* internal header files relevant only for specific systems (Pronto) */
+ #include <ol_txrx_encap.h>    /* OL_TX_ENCAP, etc */
+ #include "vos_lock.h"
+@@ -1992,14 +1992,18 @@ ol_tx_vdev_set_bundle_require(uint8_t vdev_id, unsigned long tx_bytes,
+ {
+ 	struct ol_txrx_vdev_t* vdev = ol_txrx_get_vdev_from_vdev_id(vdev_id);
+ 	bool old_bundle_required;
++	uint64_t high_th_temp;
++	uint64_t low_th_temp;
+ 
+ 	if ((!vdev) || (low_th > high_th))
+ 		return;
+ 
+ 	old_bundle_required = vdev->bundling_reqired;
+-	if (tx_bytes > ((high_th * time_in_ms * 1500)/1000))
++	high_th_temp = high_th * time_in_ms * 1500;
++	low_th_temp = low_th * time_in_ms * 1500;
++	if (tx_bytes > do_div(high_th_temp,1000))
+ 		vdev->bundling_reqired = true;
+-	else if (tx_bytes < ((low_th * time_in_ms * 1500)/1000))
++	else if (tx_bytes < do_div(high_th_temp,1000))
+ 		vdev->bundling_reqired = false;
+ 
+ 	if (old_bundle_required != vdev->bundling_reqired)
+-- 
+2.14.5
+

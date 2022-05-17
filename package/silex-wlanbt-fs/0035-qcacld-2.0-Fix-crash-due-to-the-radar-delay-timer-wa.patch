@@ -1,0 +1,35 @@
+From f16be8be6f4407c49d15f7d914211e31c61a35c4 Mon Sep 17 00:00:00 2001
+Message-Id: <f16be8be6f4407c49d15f7d914211e31c61a35c4.1650636481.git.keller@fs-net.de>
+In-Reply-To: <8876d3464f7abe86d96420dca69dd3317368c208.1650636480.git.keller@fs-net.de>
+References: <8876d3464f7abe86d96420dca69dd3317368c208.1650636480.git.keller@fs-net.de>
+From: Ronghua Zeng <ronghuaz@codeaurora.org>
+Date: Mon, 25 May 2020 11:46:29 +0800
+Subject: [PATCH 35/56] qcacld-2.0: Fix crash due to the radar delay timer was
+ blocked
+
+The radar delay timer was not stoped when the hostapd was killed
+and the SAP was destroied. The potential issue caused the SAP's
+callback function to access the uninitialized context and then crashed.
+
+Change-Id: I04910d964e813539c274cf7b3b8f7fec331db41b
+CRs-Fixed: 2686832
+---
+ CORE/SERVICES/WMA/wma.c | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/CORE/SERVICES/WMA/wma.c b/CORE/SERVICES/WMA/wma.c
+index 1d864b4..bc6c363 100644
+--- a/CORE/SERVICES/WMA/wma.c
++++ b/CORE/SERVICES/WMA/wma.c
+@@ -2267,6 +2267,8 @@ static int wma_vdev_stop_ind(tp_wma_handle wma, u_int8_t *buf)
+ 		goto free_req_msg;
+ 	}
+ 
++	wma_stop_radar_delay_timer();
++
+ 	vos_timer_stop(&req_msg->event_timeout);
+ 	if (req_msg->msg_type == WDA_DELETE_BSS_REQ) {
+ 		tpDeleteBssParams params =
+-- 
+2.14.5
+

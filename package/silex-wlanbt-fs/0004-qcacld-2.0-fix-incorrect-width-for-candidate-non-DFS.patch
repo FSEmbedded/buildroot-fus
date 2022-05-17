@@ -1,0 +1,35 @@
+From cce9273ef324ba82d3a62ff9af46f09d49bda2aa Mon Sep 17 00:00:00 2001
+Message-Id: <cce9273ef324ba82d3a62ff9af46f09d49bda2aa.1650636481.git.keller@fs-net.de>
+In-Reply-To: <8876d3464f7abe86d96420dca69dd3317368c208.1650636480.git.keller@fs-net.de>
+References: <8876d3464f7abe86d96420dca69dd3317368c208.1650636480.git.keller@fs-net.de>
+From: Miaoqing Pan <miaoqing@codeaurora.org>
+Date: Fri, 27 Dec 2019 13:28:28 +0800
+Subject: [PATCH 04/56] qcacld-2.0: fix incorrect width for candidate non-DFS
+ channel
+
+When set candidate non-DFS channel by iwpriv command, the channel
+width is incorrect after channel switch. The root cause is the
+width for the new channel is not set correctly.
+
+Tested HW: QCA9377
+CRs-Fixed: 2582520
+Change-Id: I7470a653f7f20defc34f52e8a9a91ecd166b1a34
+---
+ CORE/SAP/src/sapFsm.c | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/CORE/SAP/src/sapFsm.c b/CORE/SAP/src/sapFsm.c
+index a396a6b..94bc8c2 100644
+--- a/CORE/SAP/src/sapFsm.c
++++ b/CORE/SAP/src/sapFsm.c
+@@ -5629,6 +5629,7 @@ v_U8_t sapIndicateRadar(ptSapContext sapContext, tSirSmeDfsEventInd *dfs_event)
+         !VOS_IS_DFS_CH(sapContext->candidate_ch) &&
+         sapContext->candidate_ch != sapContext->channel) {
+         target_channel = sapContext->candidate_ch;
++	pMac->sap.SapDfsInfo.new_chanWidth = sapContext->ch_width_orig;
+         VOS_TRACE(VOS_MODULE_ID_SAP, VOS_TRACE_LEVEL_DEBUG,
+                   FL("Candidate channel exist, ch= %d"), target_channel);
+     } else {
+-- 
+2.14.5
+

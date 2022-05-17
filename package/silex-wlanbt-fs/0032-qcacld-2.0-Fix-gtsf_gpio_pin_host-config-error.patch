@@ -1,0 +1,42 @@
+From b1481752bdabf26e121d145ca95fa2a4d3423e74 Mon Sep 17 00:00:00 2001
+Message-Id: <b1481752bdabf26e121d145ca95fa2a4d3423e74.1650636481.git.keller@fs-net.de>
+In-Reply-To: <8876d3464f7abe86d96420dca69dd3317368c208.1650636480.git.keller@fs-net.de>
+References: <8876d3464f7abe86d96420dca69dd3317368c208.1650636480.git.keller@fs-net.de>
+From: Brandon Huang <yanghuan@codeaurora.org>
+Date: Mon, 20 Apr 2020 23:17:32 +0800
+Subject: [PATCH 32/56] qcacld-2.0: Fix gtsf_gpio_pin_host config error
+
+Reg parameter gtsf_gpio_pin_host for CFG_SET_TSF_GPIO_PIN_HOST has
+max value 254. But its default value is 255 (>254). Host will report
+error when the value is default.
+Fix this issue by increasing max value to 255 as default.
+
+Change-Id: Ibb81afbc60e9df251c3dc716a634385f54d775f3
+CRs-Fixed: 2667566
+---
+ CORE/HDD/inc/wlan_hdd_cfg.h | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/CORE/HDD/inc/wlan_hdd_cfg.h b/CORE/HDD/inc/wlan_hdd_cfg.h
+index 70b15ae..dd83b0c 100644
+--- a/CORE/HDD/inc/wlan_hdd_cfg.h
++++ b/CORE/HDD/inc/wlan_hdd_cfg.h
+@@ -1,5 +1,5 @@
+ /*
+- * Copyright (c) 2012-2019 The Linux Foundation. All rights reserved.
++ * Copyright (c) 2012-2020 The Linux Foundation. All rights reserved.
+  *
+  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
+  *
+@@ -4256,7 +4256,7 @@ FG_BTC_BT_INTERVAL_PAGE_P2P_STA_DEFAULT
+ /* GPIO pin to toogle when capture tsf in host side */
+ #define CFG_SET_TSF_GPIO_PIN_HOST_NAME                  "gtsf_gpio_pin_host"
+ #define CFG_SET_TSF_GPIO_PIN_HOST_MIN                   (0)
+-#define CFG_SET_TSF_GPIO_PIN_HOST_MAX                   (254)
++#define CFG_SET_TSF_GPIO_PIN_HOST_MAX                   (255)
+ #define CFG_SET_TSF_GPIO_PIN_HOST_DEFAULT               (TSF_GPIO_PIN_INVALID)
+ 
+ /*
+-- 
+2.14.5
+

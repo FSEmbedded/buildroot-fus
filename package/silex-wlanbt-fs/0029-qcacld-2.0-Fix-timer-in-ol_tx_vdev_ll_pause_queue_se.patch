@@ -1,0 +1,34 @@
+From 3c950ca85de4e48c3811cddde9dd647f9799d79c Mon Sep 17 00:00:00 2001
+Message-Id: <3c950ca85de4e48c3811cddde9dd647f9799d79c.1650636481.git.keller@fs-net.de>
+In-Reply-To: <8876d3464f7abe86d96420dca69dd3317368c208.1650636480.git.keller@fs-net.de>
+References: <8876d3464f7abe86d96420dca69dd3317368c208.1650636480.git.keller@fs-net.de>
+From: bings <bings@codeaurora.org>
+Date: Tue, 7 Apr 2020 17:55:35 +0800
+Subject: [PATCH 29/56] qcacld-2.0: Fix timer in ol_tx_vdev_ll_pause_queue_send
+
+When ol_tx_vdev_ll_pause_queue_send is called, vdev->ll_pause.timer
+is passed, in ol_tx_vdev_ll_pause_queue_send, ll_pause.timer should
+be used instead of bundle_queue.timer.
+
+Change-Id: I60a674102e56c5bfcaa09817b3f3a2d8c7f3eb3d
+CRs-Fixed: 2658604
+---
+ CORE/CLD_TXRX/TXRX/ol_tx.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/CORE/CLD_TXRX/TXRX/ol_tx.c b/CORE/CLD_TXRX/TXRX/ol_tx.c
+index 250bb4a..0555eee 100644
+--- a/CORE/CLD_TXRX/TXRX/ol_tx.c
++++ b/CORE/CLD_TXRX/TXRX/ol_tx.c
+@@ -785,7 +785,7 @@ void ol_tx_vdev_ll_pause_queue_send(void *context)
+ {
+ #ifdef QCA_SUPPORT_TXRX_VDEV_LL_TXQ
+ #if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 15, 0)
+-    struct ol_txrx_vdev_t *vdev = from_timer(vdev, t, bundle_queue.timer);
++    struct ol_txrx_vdev_t *vdev = from_timer(vdev, t, ll_pause.timer);
+ #else
+     struct ol_txrx_vdev_t *vdev = (struct ol_txrx_vdev_t *) context;
+ #endif
+-- 
+2.14.5
+

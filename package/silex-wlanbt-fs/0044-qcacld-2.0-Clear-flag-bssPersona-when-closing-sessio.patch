@@ -1,0 +1,35 @@
+From f158557446c623bede32558f0f420e6f21167f61 Mon Sep 17 00:00:00 2001
+Message-Id: <f158557446c623bede32558f0f420e6f21167f61.1650636481.git.keller@fs-net.de>
+In-Reply-To: <8876d3464f7abe86d96420dca69dd3317368c208.1650636480.git.keller@fs-net.de>
+References: <8876d3464f7abe86d96420dca69dd3317368c208.1650636480.git.keller@fs-net.de>
+From: Lihua Liu <lihual@codeaurora.org>
+Date: Wed, 21 Oct 2020 10:47:15 +0800
+Subject: [PATCH 44/56] qcacld-2.0: Clear flag bssPersona when closing session
+
+BssPersona is not clear even the session is closed.
+In SAP mode, when interface is created and disabled,
+the bssPersona of the session is alway keep as
+VOS_STA_SAP_MODE, which will cuase other AP mode (such as
+P2P_GO) can not be started for multiple beaconing role.
+
+CRs-fixed: 2798915
+Change-Id: I39c501096bf51fc7af18aaa494b7a54a55c669ee
+---
+ CORE/SME/src/csr/csrApiRoam.c | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/CORE/SME/src/csr/csrApiRoam.c b/CORE/SME/src/csr/csrApiRoam.c
+index d955cdb..1976db9 100644
+--- a/CORE/SME/src/csr/csrApiRoam.c
++++ b/CORE/SME/src/csr/csrApiRoam.c
+@@ -17123,6 +17123,7 @@ static void csrInitSession( tpAniSirGlobal pMac, tANI_U32 sessionId )
+     pSession->sessionId = CSR_SESSION_ID_INVALID;
+     pSession->callback = NULL;
+     pSession->pContext = NULL;
++    pSession->bssParams.bssPersona = 0;
+     pSession->connectState = eCSR_ASSOC_STATE_TYPE_NOT_CONNECTED;
+     csrFreeRoamProfile( pMac, sessionId );
+     csrRoamFreeConnectProfile(pMac, &pSession->connectedProfile);
+-- 
+2.14.5
+

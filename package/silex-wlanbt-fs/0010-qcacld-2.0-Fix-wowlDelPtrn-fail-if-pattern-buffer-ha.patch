@@ -1,0 +1,48 @@
+From 576a6d6d585e2e6c08d7903d5815e6d31f1887c8 Mon Sep 17 00:00:00 2001
+Message-Id: <576a6d6d585e2e6c08d7903d5815e6d31f1887c8.1650636481.git.keller@fs-net.de>
+In-Reply-To: <8876d3464f7abe86d96420dca69dd3317368c208.1650636480.git.keller@fs-net.de>
+References: <8876d3464f7abe86d96420dca69dd3317368c208.1650636480.git.keller@fs-net.de>
+From: Will Huang <wilhuang@codeaurora.org>
+Date: Thu, 9 Jan 2020 17:49:42 +0800
+Subject: [PATCH 10/56] qcacld-2.0: Fix wowlDelPtrn fail if pattern buffer has
+ empty slot
+
+When delete saved wow pattern, first try to find it, but currently
+if pattern buffer has empty slot in the middle, it breaks finding
+so didn't search the buffer after empty slot.
+
+Fix is skip empty slot when searching for wow pattern.
+
+Change-Id: I8301f788bad86e53b4fbbb4baee3631ce04c7fec
+CRs-Fixed: 2599933
+---
+ CORE/HDD/src/wlan_hdd_wowl.c | 7 +++++--
+ 1 file changed, 5 insertions(+), 2 deletions(-)
+
+diff --git a/CORE/HDD/src/wlan_hdd_wowl.c b/CORE/HDD/src/wlan_hdd_wowl.c
+index 3522658..50926d8 100644
+--- a/CORE/HDD/src/wlan_hdd_wowl.c
++++ b/CORE/HDD/src/wlan_hdd_wowl.c
+@@ -1,5 +1,5 @@
+ /*
+- * Copyright (c) 2013-2018 The Linux Foundation. All rights reserved.
++ * Copyright (c) 2013-2018, 2020 The Linux Foundation. All rights reserved.
+  *
+  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
+  *
+@@ -299,8 +299,11 @@ v_BOOL_t hdd_del_wowl_ptrn (hdd_adapter_t *pAdapter, const char * ptrn)
+   v_U8_t sessionId = pAdapter->sessionId;
+ 
+   // Detect pattern
+-  for (id=0; id<WOWL_MAX_PTRNS_ALLOWED && g_hdd_wowl_ptrns[id] != NULL; id++)
++  for (id=0; id<WOWL_MAX_PTRNS_ALLOWED; id++)
+   {
++    if (!g_hdd_wowl_ptrns[id])
++      continue;
++
+     if(!strcmp(ptrn, g_hdd_wowl_ptrns[id]))
+     {
+       patternFound = VOS_TRUE;
+-- 
+2.14.5
+

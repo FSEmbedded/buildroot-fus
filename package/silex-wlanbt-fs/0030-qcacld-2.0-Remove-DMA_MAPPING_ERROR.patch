@@ -1,0 +1,44 @@
+From 7593df0438e77ac6ad84d068135b1e2c9c2fa6af Mon Sep 17 00:00:00 2001
+Message-Id: <7593df0438e77ac6ad84d068135b1e2c9c2fa6af.1650636481.git.keller@fs-net.de>
+In-Reply-To: <8876d3464f7abe86d96420dca69dd3317368c208.1650636480.git.keller@fs-net.de>
+References: <8876d3464f7abe86d96420dca69dd3317368c208.1650636480.git.keller@fs-net.de>
+From: bings <bings@codeaurora.org>
+Date: Mon, 6 Apr 2020 15:30:36 +0800
+Subject: [PATCH 30/56] qcacld-2.0: Remove DMA_MAPPING_ERROR
+
+DMA_MAPPING_ERROR is useless, and it is defined in kernel 5.4+.
+Remove DMA_MAPPING_ERROR.
+
+Change-Id: Ib7e556d94d6fec8735d8b33b44004a1ee539d5c1
+CRs-Fixed: 2657683
+---
+ CORE/SERVICES/HIF/sdio/linux/if_ath_sdio.h | 8 +-------
+ 1 file changed, 1 insertion(+), 7 deletions(-)
+
+diff --git a/CORE/SERVICES/HIF/sdio/linux/if_ath_sdio.h b/CORE/SERVICES/HIF/sdio/linux/if_ath_sdio.h
+index ccb0d3c..f0b19ad 100644
+--- a/CORE/SERVICES/HIF/sdio/linux/if_ath_sdio.h
++++ b/CORE/SERVICES/HIF/sdio/linux/if_ath_sdio.h
+@@ -1,5 +1,5 @@
+ /*
+- * Copyright (c) 2013-2014 2018-2019 The Linux Foundation. All rights reserved.
++ * Copyright (c) 2013-2014 2018-2020 The Linux Foundation. All rights reserved.
+  *
+  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
+  *
+@@ -82,12 +82,6 @@ static inline int athdiag_procfs_init(void *scn) { return 0; }
+ static inline void athdiag_procfs_remove(void) { return; }
+ #endif
+ 
+-#if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,27)
+-#define DMA_MAPPING_ERROR(dev, addr) dma_mapping_error((addr))
+-#else
+-#define DMA_MAPPING_ERROR(dev, addr) dma_mapping_error((dev), (addr))
+-#endif
+-
+ int ath_sdio_probe(void *context, void *hif_handle);
+ void ath_sdio_remove(void *context, void *hif_handle);
+ int ath_sdio_suspend(void *context);
+-- 
+2.14.5
+

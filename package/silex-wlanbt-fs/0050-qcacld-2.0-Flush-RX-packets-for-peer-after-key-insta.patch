@@ -1,0 +1,57 @@
+From 25cc60d283d75c7f2524c773461cb3afc65bf8f1 Mon Sep 17 00:00:00 2001
+Message-Id: <25cc60d283d75c7f2524c773461cb3afc65bf8f1.1650636482.git.keller@fs-net.de>
+In-Reply-To: <8876d3464f7abe86d96420dca69dd3317368c208.1650636480.git.keller@fs-net.de>
+References: <8876d3464f7abe86d96420dca69dd3317368c208.1650636480.git.keller@fs-net.de>
+From: Tiger Yu <tfyu@codeaurora.org>
+Date: Mon, 8 Feb 2021 14:58:31 +0800
+Subject: [PATCH 50/56] qcacld-2.0: Flush RX packets for peer after key
+ installation
+
+Rx packets including fragments are not flushed as part of rekey which
+could result in fragments encrypted under different keys to be
+reassembled.
+
+Fix is to flush all rx pakcets including fragments for the peer after
+key installation.
+
+Change-Id: I80b680040ceab687d0e5ee01c21582d8873a773b
+CRs-Fixed: 2867975
+---
+ CORE/SERVICES/WMA/wma.c | 9 ++++++++-
+ 1 file changed, 8 insertions(+), 1 deletion(-)
+
+diff --git a/CORE/SERVICES/WMA/wma.c b/CORE/SERVICES/WMA/wma.c
+index bc6c363..1cb8346 100644
+--- a/CORE/SERVICES/WMA/wma.c
++++ b/CORE/SERVICES/WMA/wma.c
+@@ -1,5 +1,5 @@
+ /*
+- * Copyright (c) 2013-2019 The Linux Foundation. All rights reserved.
++ * Copyright (c) 2013-2021 The Linux Foundation. All rights reserved.
+  *
+  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
+  *
+@@ -113,6 +113,7 @@
+ #include "wma_nan_datapath.h"
+ #include "adf_trace.h"
+ 
++#include "ol_rx_reorder.h"
+ /* ################### defines ################### */
+ /*
+  * TODO: Following constant should be shared by firwmare in
+@@ -21148,6 +21149,12 @@ static void wma_set_stakey(tp_wma_handle wma_handle, tpSetStaKeyParams key_info)
+ 		}
+ 	}
+ 
++        WMA_LOGD("%s: QSV2020002, vid(%u), rx cleanup for peer(%pM) after key install",
++            __func__,
++            txrx_vdev->vdev_id,
++            peer->mac_addr.raw);
++        ol_rx_reorder_peer_cleanup(txrx_vdev, peer);
++
+         /* In IBSS mode, set the BSS KEY for this peer
+          ** BSS key is supposed to be cache into wma_handle
+         */
+-- 
+2.14.5
+

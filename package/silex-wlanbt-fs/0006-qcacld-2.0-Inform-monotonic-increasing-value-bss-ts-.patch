@@ -1,0 +1,41 @@
+From 204957188df5fe0e384d13e4b2674541a8ebda72 Mon Sep 17 00:00:00 2001
+Message-Id: <204957188df5fe0e384d13e4b2674541a8ebda72.1650636481.git.keller@fs-net.de>
+In-Reply-To: <8876d3464f7abe86d96420dca69dd3317368c208.1650636480.git.keller@fs-net.de>
+References: <8876d3464f7abe86d96420dca69dd3317368c208.1650636480.git.keller@fs-net.de>
+From: Li Feng <lifeng@codeaurora.org>
+Date: Tue, 24 Dec 2019 18:23:47 +0800
+Subject: [PATCH 06/56] qcacld-2.0: Inform monotonic increasing value bss ts in
+ android
+
+Inform monotonic increasing value bss ts in android.
+
+Change-Id: I5dae63697e32f960ea980e9f1bc834e2c61437b9
+---
+ CORE/HDD/src/wlan_hdd_cfg80211.c | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/CORE/HDD/src/wlan_hdd_cfg80211.c b/CORE/HDD/src/wlan_hdd_cfg80211.c
+index 7d8004d..e1f0c53 100644
+--- a/CORE/HDD/src/wlan_hdd_cfg80211.c
++++ b/CORE/HDD/src/wlan_hdd_cfg80211.c
+@@ -21687,7 +21687,7 @@ wlan_hdd_cfg80211_inform_bss_frame( hdd_adapter_t *pAdapter,
+     int rssi = 0;
+     hdd_context_t *pHddCtx;
+     int status;
+-#ifdef CONFIG_CNSS
++#ifdef ANDROID
+     struct timespec ts;
+ #endif
+     hdd_config_t *cfg_param = NULL;
+@@ -21706,7 +21706,7 @@ wlan_hdd_cfg80211_inform_bss_frame( hdd_adapter_t *pAdapter,
+ 
+     memcpy(mgmt->bssid, bss_desc->bssId, ETH_ALEN);
+ 
+-#ifdef CONFIG_CNSS
++#ifdef ANDROID
+     /* Android does not want the time stamp from the frame.
+        Instead it wants a monotonic increasing value */
+     vos_get_monotonic_boottime_ts(&ts);
+-- 
+2.14.5
+

@@ -1,0 +1,40 @@
+From 8c48a56a120f524e69e5c160834c82d3e2597eff Mon Sep 17 00:00:00 2001
+Message-Id: <8c48a56a120f524e69e5c160834c82d3e2597eff.1650636482.git.keller@fs-net.de>
+In-Reply-To: <8876d3464f7abe86d96420dca69dd3317368c208.1650636480.git.keller@fs-net.de>
+References: <8876d3464f7abe86d96420dca69dd3317368c208.1650636480.git.keller@fs-net.de>
+From: lihual <lihual@codeaurora.org>
+Date: Fri, 22 Jan 2021 15:17:45 +0800
+Subject: [PATCH 47/56] qcacld-2.0: Fix a compile error
+
+fix a format error in function ol_tx_vdev_set_bundle_require
+
+Change-Id: I5d280b6be72517a44e579a59ce2261d58e0afc7f
+CRs-Fixed: 2816823
+---
+ CORE/CLD_TXRX/TXRX/ol_tx.c | 6 +++---
+ 1 file changed, 3 insertions(+), 3 deletions(-)
+
+diff --git a/CORE/CLD_TXRX/TXRX/ol_tx.c b/CORE/CLD_TXRX/TXRX/ol_tx.c
+index 662fa71..b09cb05 100644
+--- a/CORE/CLD_TXRX/TXRX/ol_tx.c
++++ b/CORE/CLD_TXRX/TXRX/ol_tx.c
+@@ -1,5 +1,5 @@
+-/*
+- * Copyright (c) 2011-2014, 2016-2018 The Linux Foundation. All rights reserved.
++ * Copyright (c) 2011-2014, 2016-2018, 2021 The Linux Foundation. 
++ * All rights reserved.
+  *
+  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
+  *
+@@ -2003,7 +2003,7 @@ ol_tx_vdev_set_bundle_require(uint8_t vdev_id, unsigned long tx_bytes,
+ 
+ 	if (old_bundle_required != vdev->bundling_reqired)
+ 		TXRX_PRINT(TXRX_PRINT_LEVEL_INFO1,
+-			"vdev_id %d bundle_require %d tx_bytes %ld time_in_ms %d high_th %d low_th %d\n",
++			"vdev_id %d bundle_require %d tx_bytes %ld time_in_ms %d high_th %lld low_th %lld\n",
+ 			vdev->vdev_id, vdev->bundling_reqired, tx_bytes,
+ 			time_in_ms, high_th, low_th);
+ }
+-- 
+2.14.5
+

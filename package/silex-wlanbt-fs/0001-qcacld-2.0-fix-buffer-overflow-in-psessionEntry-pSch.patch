@@ -1,0 +1,44 @@
+From 8876d3464f7abe86d96420dca69dd3317368c208 Mon Sep 17 00:00:00 2001
+Message-Id: <8876d3464f7abe86d96420dca69dd3317368c208.1650636480.git.keller@fs-net.de>
+From: bings <bings@codeaurora.org>
+Date: Fri, 29 Nov 2019 15:37:56 +0800
+Subject: [PATCH 01/56] qcacld-2.0: fix buffer overflow in
+ psessionEntry->pSchBeaconFrameBegin
+
+psessionEntry->pSchBeaconFrameBegin is allocated with fix length
+SCH_MAX_BEACON_SIZE. Do not copy the value to the buffer exceeding
+psessionEntry->pSchBeaconFrameBegin.
+
+Change-Id: I539692c01753b991a963b0416177cf5b474cfdf8
+CRs-Fixed: 2577682
+---
+ CORE/MAC/src/pe/sch/schBeaconGen.c | 8 +++++++-
+ 1 file changed, 7 insertions(+), 1 deletion(-)
+
+diff --git a/CORE/MAC/src/pe/sch/schBeaconGen.c b/CORE/MAC/src/pe/sch/schBeaconGen.c
+index 94d874b..c44345b 100644
+--- a/CORE/MAC/src/pe/sch/schBeaconGen.c
++++ b/CORE/MAC/src/pe/sch/schBeaconGen.c
+@@ -1,5 +1,5 @@
+ /*
+- * Copyright (c) 2012-2017 The Linux Foundation. All rights reserved.
++ * Copyright (c) 2012-2017, 2019 The Linux Foundation. All rights reserved.
+  *
+  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
+  *
+@@ -821,6 +821,12 @@ void writeBeaconToMemory(tpAniSirGlobal pMac, tANI_U16 size, tANI_U16 length, tp
+     // copy end of beacon only if length > 0
+     if (length > 0)
+     {
++        if (size + psessionEntry->schBeaconOffsetEnd > SCH_MAX_BEACON_SIZE) {
++            schLog(pMac, LOGE,
++                   FL("beacon template fail size %d BeaconOffsetEnd %d"),
++                   size, psessionEntry->schBeaconOffsetEnd);
++            return;
++        }
+         for (i=0; i < psessionEntry->schBeaconOffsetEnd; i++)
+             psessionEntry->pSchBeaconFrameBegin[size++] = psessionEntry->pSchBeaconFrameEnd[i];
+     }
+-- 
+2.14.5
+

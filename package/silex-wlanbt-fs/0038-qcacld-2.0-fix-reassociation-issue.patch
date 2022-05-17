@@ -1,0 +1,52 @@
+From 34d8c35811bc6aba42158b6592a46aa67ec80f9d Mon Sep 17 00:00:00 2001
+Message-Id: <34d8c35811bc6aba42158b6592a46aa67ec80f9d.1650636481.git.keller@fs-net.de>
+In-Reply-To: <8876d3464f7abe86d96420dca69dd3317368c208.1650636480.git.keller@fs-net.de>
+References: <8876d3464f7abe86d96420dca69dd3317368c208.1650636480.git.keller@fs-net.de>
+From: bings <bings@codeaurora.org>
+Date: Thu, 16 Jul 2020 18:38:51 +0800
+Subject: [PATCH 38/56] qcacld-2.0: fix reassociation issue
+
+While getting reassociation request frame, user space hostapd will
+trigger diassociate with reason code 13. Association can't be
+established.
+
+The root cause is host driver forwards more 6 bytes to user space.
+The 6 bytes is current AP address in association request frame.
+Hostapd can't paras association request frame because the additional
+6 bytes.
+
+Skip current AP address before forwarding reassociation request
+frame to user space.
+
+Change-Id: I94a7c26289f24a1f0716fe64c4ee58eae1a913c6
+CRs-Fixed: 2717695
+---
+ CORE/SAP/src/sapFsm.c | 7 ++++++-
+ 1 file changed, 6 insertions(+), 1 deletion(-)
+
+diff --git a/CORE/SAP/src/sapFsm.c b/CORE/SAP/src/sapFsm.c
+index 94bc8c2..b81672a 100644
+--- a/CORE/SAP/src/sapFsm.c
++++ b/CORE/SAP/src/sapFsm.c
+@@ -1,5 +1,5 @@
+ /*
+- * Copyright (c) 2012-2019 The Linux Foundation. All rights reserved.
++ * Copyright (c) 2012-2020 The Linux Foundation. All rights reserved.
+  *
+  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
+  *
+@@ -3678,6 +3678,11 @@ sapSignalHDDevent
+                                      ASSOC_REQ_IE_OFFSET);
+             sta_event_ptr->ies = (pCsrRoamInfo->assocReqPtr +
+                                      ASSOC_REQ_IE_OFFSET);
++            if (pCsrRoamInfo->fReassocReq) {
++                sta_event_ptr->iesLen -= VOS_MAC_ADDR_SIZE;
++                sta_event_ptr->ies += VOS_MAC_ADDR_SIZE;
++            }
++
+             /* also fill up the channel info from the csrRoamInfo */
+             pChanInfo =
+             &sta_event_ptr->chan_info;
+-- 
+2.14.5
+

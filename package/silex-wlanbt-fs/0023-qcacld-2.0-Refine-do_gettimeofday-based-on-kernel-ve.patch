@@ -1,0 +1,198 @@
+From 2cc6a77e07329059d61e14ad4302796907a02522 Mon Sep 17 00:00:00 2001
+Message-Id: <2cc6a77e07329059d61e14ad4302796907a02522.1650636481.git.keller@fs-net.de>
+In-Reply-To: <8876d3464f7abe86d96420dca69dd3317368c208.1650636480.git.keller@fs-net.de>
+References: <8876d3464f7abe86d96420dca69dd3317368c208.1650636480.git.keller@fs-net.de>
+From: bings <bings@codeaurora.org>
+Date: Mon, 6 Apr 2020 12:37:22 +0800
+Subject: [PATCH 23/56] qcacld-2.0: Refine do_gettimeofday based on kernel
+ version
+
+kernel 5.0+ uses ktime_get_real_ts64 instead of do_gettimeofday.
+
+Update the usage of do_gettimeofday
+
+Change-Id: If3da0429d9cfbed0bb38612966737333366b8df2
+CRs-Fixed: 2657540
+---
+ CORE/SVC/src/logging/wlan_logging_sock_svc.c |  4 +-
+ CORE/VOSS/inc/vos_timer.h                    | 10 ++++-
+ CORE/VOSS/src/vos_packet.c                   |  4 +-
+ CORE/VOSS/src/vos_timer.c                    | 65 +++++++++++++++++++++++++++-
+ 4 files changed, 76 insertions(+), 7 deletions(-)
+
+diff --git a/CORE/SVC/src/logging/wlan_logging_sock_svc.c b/CORE/SVC/src/logging/wlan_logging_sock_svc.c
+index 6ed6c04..2667c27 100644
+--- a/CORE/SVC/src/logging/wlan_logging_sock_svc.c
++++ b/CORE/SVC/src/logging/wlan_logging_sock_svc.c
+@@ -1,5 +1,5 @@
+ /*
+- * Copyright (c) 2014-2017 The Linux Foundation. All rights reserved.
++ * Copyright (c) 2014-2020 The Linux Foundation. All rights reserved.
+  *
+  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
+  *
+@@ -310,7 +310,7 @@ int wlan_log_to_user(VOS_TRACE_LEVEL log_level, char *to_be_sent, int length)
+ 	} else {
+ 
+ 		/* Format the Log time R#: [hr:min:sec.microsec] */
+-		do_gettimeofday(&tv);
++		vos_timer_get_timeval(&tv);
+ 		/* Convert rtc to local time */
+ 		local_time = (u32)(tv.tv_sec - (sys_tz.tz_minuteswest * 60));
+ 		rtc_time_to_tm(local_time, &tm);
+diff --git a/CORE/VOSS/inc/vos_timer.h b/CORE/VOSS/inc/vos_timer.h
+index f3d7baa..5a45273 100644
+--- a/CORE/VOSS/inc/vos_timer.h
++++ b/CORE/VOSS/inc/vos_timer.h
+@@ -1,5 +1,5 @@
+ /*
+- * Copyright (c) 2014, 2016-2018 The Linux Foundation. All rights reserved.
++ * Copyright (c) 2014, 2016-2018, 2020 The Linux Foundation. All rights reserved.
+  *
+  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
+  *
+@@ -347,6 +347,14 @@ v_TIME_t vos_timer_get_system_ticks( v_VOID_t );
+   ------------------------------------------------------------------------*/
+ v_TIME_t vos_timer_get_system_time( v_VOID_t );
+ 
++/**
++ * vos_timer_get_timeval() - get struct timeval
++ * tv: pointer to struct timeval
++ *
++ * Return: void
++ */
++void vos_timer_get_timeval(struct timeval *tv);
++
+ /**
+  * vos_system_ticks() - get system ticks
+  *
+diff --git a/CORE/VOSS/src/vos_packet.c b/CORE/VOSS/src/vos_packet.c
+index c0381e8..0c8209e 100644
+--- a/CORE/VOSS/src/vos_packet.c
++++ b/CORE/VOSS/src/vos_packet.c
+@@ -1,5 +1,5 @@
+ /*
+- * Copyright (c) 2012-2014, 2016 The Linux Foundation. All rights reserved.
++ * Copyright (c) 2012-2014, 2016, 2020 The Linux Foundation. All rights reserved.
+  *
+  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
+  *
+@@ -347,7 +347,7 @@ void vos_pkt_trace_buf_update
+    trace_buffer[slot].order = trace_buffer_order;
+    trace_buffer_order++;
+    adf_os_spin_unlock_bh(&trace_buffer_lock);
+-   do_gettimeofday(&tv);
++   vos_timer_get_timeval(&tv);
+    trace_buffer[slot].event_sec_time = tv.tv_sec;
+    trace_buffer[slot].event_msec_time = tv.tv_usec;
+    strlcpy(trace_buffer[slot].event_string, event_string,
+diff --git a/CORE/VOSS/src/vos_timer.c b/CORE/VOSS/src/vos_timer.c
+index d38fe59..3adf142 100644
+--- a/CORE/VOSS/src/vos_timer.c
++++ b/CORE/VOSS/src/vos_timer.c
+@@ -1,5 +1,5 @@
+ /*
+- * Copyright (c) 2012-2013, 2015-2019 The Linux Foundation. All rights reserved.
++ * Copyright (c) 2012-2013, 2015-2020 The Linux Foundation. All rights reserved.
+  *
+  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
+  *
+@@ -866,18 +866,60 @@ v_TIME_t vos_timer_get_system_ticks( v_VOID_t )
+   \sa
+ 
+   ------------------------------------------------------------------------*/
+-v_TIME_t vos_timer_get_system_time( v_VOID_t )
++#if (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 0, 0))
++v_TIME_t vos_timer_get_system_time(void)
++{
++	struct timespec64 tv;
++
++	ktime_get_real_ts64(&tv);
++	return tv.tv_sec * 1000 + tv.tv_nsec / 1000000;
++}
++#else
++v_TIME_t vos_timer_get_system_time(void)
+ {
+    struct timeval tv;
+    do_gettimeofday(&tv);
+    return tv.tv_sec*1000 + tv.tv_usec/1000;
+ }
++#endif
++
++#if (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 0, 0))
++void vos_timer_get_timeval(struct timeval *tv)
++{
++	struct timespec64 tv_spec;
++
++	ktime_get_real_ts64(&tv_spec);
++	tv->tv_sec = tv_spec.tv_sec;
++	tv->tv_usec = tv_spec.tv_nsec / 1000;
++}
++#else
++void vos_timer_get_timeval(struct timeval *tv)
++{
++	do_gettimeofday(tv);
++}
++#endif
+ 
+ /**
+  * vos_get_time_of_the_day_ms() - get time in milisec
+  *
+  * Return: time of the day in ms
+  */
++#if (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 0, 0))
++unsigned long vos_get_time_of_the_day_ms(void)
++{
++	struct timespec64 tv;
++	unsigned long local_time;
++	struct rtc_time tm;
++
++	ktime_get_real_ts64(&tv);
++	local_time = (unsigned long)(tv.tv_sec - (sys_tz.tz_minuteswest * 60));
++	rtc_time_to_tm(local_time, &tm);
++
++	return (tm.tm_hour * 60 * 60 * 1000) +
++		(tm.tm_min * 60 * 1000) + (tm.tm_sec * 1000) +
++		(tv.tv_nsec / 1000000);
++}
++#else
+ unsigned long vos_get_time_of_the_day_ms(void)
+ {
+ 	struct timeval tv;
+@@ -893,7 +935,25 @@ unsigned long vos_get_time_of_the_day_ms(void)
+ 		(tm.tm_min *60 * 1000) + (tm.tm_sec * 1000)+
+ 		(tv.tv_usec/1000));
+ }
++#endif
++
++#if (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 0, 0))
++void vos_get_time_of_the_day_in_hr_min_sec_usec(char *tbuf, int len)
++{
++	struct timespec64 tv;
++	struct rtc_time tm;
++	unsigned long local_time;
+ 
++	/* Format the Log time R#: [hr:min:sec.microsec] */
++	ktime_get_real_ts64(&tv);
++	/* Convert rtc to local time */
++	local_time = (u32)(tv.tv_sec - (sys_tz.tz_minuteswest * 60));
++	rtc_time_to_tm(local_time, &tm);
++	scnprintf(tbuf, len,
++		  "[%02d:%02d:%02d.%06lu]",
++		  tm.tm_hour, tm.tm_min, tm.tm_sec, tv.tv_nsec / 1000);
++}
++#else
+ void vos_get_time_of_the_day_in_hr_min_sec_usec(char *tbuf, int len)
+ {
+        struct timeval tv;
+@@ -909,6 +969,7 @@ void vos_get_time_of_the_day_in_hr_min_sec_usec(char *tbuf, int len)
+                "[%02d:%02d:%02d.%06lu] ",
+                tm.tm_hour, tm.tm_min, tm.tm_sec, tv.tv_usec);
+ }
++#endif
+ 
+ /**
+  * vos_wdthread_init_timer_work() -  Initialize timer work
+-- 
+2.14.5
+

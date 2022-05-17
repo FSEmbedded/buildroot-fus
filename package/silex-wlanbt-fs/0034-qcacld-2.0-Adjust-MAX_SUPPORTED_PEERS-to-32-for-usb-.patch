@@ -1,0 +1,32 @@
+From f506a0a9d237e0683258c9e3c946ae95dcfa5023 Mon Sep 17 00:00:00 2001
+Message-Id: <f506a0a9d237e0683258c9e3c946ae95dcfa5023.1650636481.git.keller@fs-net.de>
+In-Reply-To: <8876d3464f7abe86d96420dca69dd3317368c208.1650636480.git.keller@fs-net.de>
+References: <8876d3464f7abe86d96420dca69dd3317368c208.1650636480.git.keller@fs-net.de>
+From: lifeng <lifeng@codeaurora.org>
+Date: Wed, 6 May 2020 14:23:44 +0800
+Subject: [PATCH 34/56] qcacld-2.0: Adjust MAX_SUPPORTED_PEERS to 32 for usb
+ card
+
+Adjust MAX_SUPPORTED_PEERS to 32 for usb card.
+
+Change-Id: I7e423bba8d61c6292fce2f235affe236cfe5a396
+---
+ CORE/SERVICES/BMI/ol_fw.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/CORE/SERVICES/BMI/ol_fw.c b/CORE/SERVICES/BMI/ol_fw.c
+index f87eaf6..d7bcf7b 100644
+--- a/CORE/SERVICES/BMI/ol_fw.c
++++ b/CORE/SERVICES/BMI/ol_fw.c
+@@ -994,7 +994,7 @@ static char *ol_board_id_to_filename(struct ol_softc *scn, uint16_t board_id)
+ #ifdef HIF_SDIO
+ #define MAX_SUPPORTED_PEERS 32
+ #else
+-#define MAX_SUPPORTED_PEERS 10
++#define MAX_SUPPORTED_PEERS 32
+ #endif
+ #else
+ #define MAX_SUPPORTED_PEERS_REV1_1 14
+-- 
+2.14.5
+

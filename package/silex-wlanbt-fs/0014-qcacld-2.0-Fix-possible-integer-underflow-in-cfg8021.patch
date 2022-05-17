@@ -1,0 +1,54 @@
+From 32325d3b9552d26cb20326d2d3f0cdad34a22b1a Mon Sep 17 00:00:00 2001
+Message-Id: <32325d3b9552d26cb20326d2d3f0cdad34a22b1a.1650636481.git.keller@fs-net.de>
+In-Reply-To: <8876d3464f7abe86d96420dca69dd3317368c208.1650636480.git.keller@fs-net.de>
+References: <8876d3464f7abe86d96420dca69dd3317368c208.1650636480.git.keller@fs-net.de>
+From: Jingxiang Ge <jge@codeaurora.org>
+Date: Tue, 23 Oct 2018 17:38:21 +0800
+Subject: [PATCH 14/56] qcacld-2.0: Fix possible integer underflow in
+ cfg80211_rx_mgmt
+
+propagation from qcacld-3.0 to qcacld-2.0
+
+In the function cfg80211_rx_mgmt, data_len is calculated as
+len - ieee80211_hdrlen(mgmt->frame_control). Len is not
+validated before this calculation. So a possible integer
+underflow will occur if len value is less than the value of
+ieee80211_hdrlen(mgmt->frame_control).
+
+Validate the value of len against
+ieee80211_hdrlen(mgmt->frame_control) in the caller.
+
+Change-Id: Iae776daf37b0c052bd4ce4da44ea728d121eae51
+CRs-Fixed: 2337425
+---
+ CORE/HDD/src/wlan_hdd_main.c | 7 +++++++
+ 1 file changed, 7 insertions(+)
+
+diff --git a/CORE/HDD/src/wlan_hdd_main.c b/CORE/HDD/src/wlan_hdd_main.c
+index b19dd1a..7c4dd6d 100644
+--- a/CORE/HDD/src/wlan_hdd_main.c
++++ b/CORE/HDD/src/wlan_hdd_main.c
+@@ -4102,6 +4102,8 @@ void hdd_indicate_mgmt_frame(tSirSmeMgmtFrameInd *frame_ind)
+ 	hdd_adapter_t *adapter;
+ 	v_CONTEXT_t vos_context;
+ 	int i;
++	struct ieee80211_mgmt *mgmt =
++		(struct ieee80211_mgmt *)frame_ind->frameBuf;
+ 
+ 	/* Get the global VOSS context.*/
+ 	vos_context = vos_get_global_context(VOS_MODULE_ID_SYS, NULL);
+@@ -4116,6 +4118,11 @@ void hdd_indicate_mgmt_frame(tSirSmeMgmtFrameInd *frame_ind)
+ 	if (0 != wlan_hdd_validate_context(hdd_ctx))
+ 		return;
+ 
++	if (frame_ind->frame_len < ieee80211_hdrlen(mgmt->frame_control)) {
++		hddLog(LOGE, FL("Invalid frame length"));
++		return;
++	}
++
+ 	if (HDD_SESSION_ID_ANY == frame_ind->sessionId) {
+ 		for (i = 0; i < HDD_SESSION_MAX; i++) {
+ 			adapter =
+-- 
+2.14.5
+

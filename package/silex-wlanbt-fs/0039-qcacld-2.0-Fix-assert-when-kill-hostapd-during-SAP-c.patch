@@ -1,0 +1,71 @@
+From 16ec5ea5cf371a092f6a98238e19581b9aeb1ab8 Mon Sep 17 00:00:00 2001
+Message-Id: <16ec5ea5cf371a092f6a98238e19581b9aeb1ab8.1650636481.git.keller@fs-net.de>
+In-Reply-To: <8876d3464f7abe86d96420dca69dd3317368c208.1650636480.git.keller@fs-net.de>
+References: <8876d3464f7abe86d96420dca69dd3317368c208.1650636480.git.keller@fs-net.de>
+From: Brandon Huang <yanghuan@codeaurora.org>
+Date: Mon, 17 Aug 2020 15:42:19 +0800
+Subject: [PATCH 39/56] qcacld-2.0: Fix assert when kill hostapd during SAP
+ channel switch
+
+When user kills hostapd, SAP handles msg eSAP_HDD_STOP_INFRA_BSS in
+state machine and changes state to eSAP_DISCONNECTING. When SAP gets
+radar signal in cac, it also changes state to eSAP_DISCONNECTING
+from eSAP_DFS_CAC_WAIT. But state eSAP_DISCONNECTING can't handle
+eSAP_HDD_STOP_INFRA_BSS. So eSAP_HDD_STOP_INFRA_BSS is not handled
+if user kills hostapd during SAP channel switch (kill hostapd after
+SAP gets radar signal in cac, before channel change success callback
+function), which causes SAP sm going on running and getting assert.
+
+To fix this issue, add handler for msg eSAP_HDD_STOP_INFRA_BSS in
+state eSAP_DISCONNECTING, and block channel change callback if SAP
+is in eCSR_ROAM_SUBSTATE_STOP_BSS_REQ state.
+
+Change-Id: I404d8768e65a706e791e9c09682cacc63d06c374
+CRs-Fixed: 2752709
+---
+ CORE/SAP/src/sapFsm.c             |  7 +++++++
+ CORE/SME/src/sme_common/sme_Api.c | 10 ++++++++++
+ 2 files changed, 17 insertions(+)
+
+diff --git a/CORE/SAP/src/sapFsm.c b/CORE/SAP/src/sapFsm.c
+index b81672a..2fab9b4 100644
+--- a/CORE/SAP/src/sapFsm.c
++++ b/CORE/SAP/src/sapFsm.c
+@@ -4896,6 +4896,13 @@ sapFsm
+                     vosStatus = sapGotoDisconnecting(sapContext);
+                 }
+             }
++            else if (msg == eSAP_HDD_STOP_INFRA_BSS)
++            {
++                VOS_TRACE( VOS_MODULE_ID_SAP, VOS_TRACE_LEVEL_INFO_MED,
++                          "In %s, in state %s, event msg %d",
++                          __func__, "eSAP_DISCONNECTING ", msg);
++                vosStatus = sapGotoDisconnecting(sapContext);
++            }
+             else
+             {
+                 VOS_TRACE( VOS_MODULE_ID_SAP, VOS_TRACE_LEVEL_ERROR,
+diff --git a/CORE/SME/src/sme_common/sme_Api.c b/CORE/SME/src/sme_common/sme_Api.c
+index a5964b6..623632a 100644
+--- a/CORE/SME/src/sme_common/sme_Api.c
++++ b/CORE/SME/src/sme_common/sme_Api.c
+@@ -15326,6 +15326,16 @@ eHalStatus sme_ProcessChannelChangeResp(tpAniSirGlobal pMac,
+ 
+         return status;
+     }
++    if (CSR_IS_ROAM_SUBSTATE_STOP_BSS_REQ( pMac, SessionId))
++    {
++        VOS_TRACE(VOS_MODULE_ID_SME, VOS_TRACE_LEVEL_INFO_MED,
++                "sapdfs: Abort channel change in STOP_BSS_REQ state on sessionId[%d]",
++                SessionId);
++        status = eHAL_STATUS_FAILURE;
++        vos_mem_free(roam_info);
++
++        return status;
++    }
+     if (msg_type == eWNI_SME_CHANNEL_CHANGE_RSP)
+     {
+         roam_info->channelChangeRespEvent->sessionId = SessionId;
+-- 
+2.14.5
+

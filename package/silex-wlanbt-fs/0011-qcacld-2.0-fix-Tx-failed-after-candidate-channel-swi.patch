@@ -1,0 +1,44 @@
+From d4fc3446ca1061922fdf02ae60dea23975c7f9f2 Mon Sep 17 00:00:00 2001
+Message-Id: <d4fc3446ca1061922fdf02ae60dea23975c7f9f2.1650636481.git.keller@fs-net.de>
+In-Reply-To: <8876d3464f7abe86d96420dca69dd3317368c208.1650636480.git.keller@fs-net.de>
+References: <8876d3464f7abe86d96420dca69dd3317368c208.1650636480.git.keller@fs-net.de>
+From: Miaoqing Pan <miaoqing@codeaurora.org>
+Date: Fri, 17 Jan 2020 14:19:32 +0800
+Subject: [PATCH 11/56] qcacld-2.0: fix Tx failed after candidate channel
+ switch
+
+When set candidate non-DFS channel, Tx failed after channel
+switch. The root cause is the BSS's selfStaId is changed,
+fix this issue by restoring the staId from session entity.
+
+CRs-Fixed: 2605091
+Change-Id: I0ea17b7bc0058c144624729088bc4d1e83de853e
+---
+ CORE/SME/src/sme_common/sme_Api.c | 5 +++++
+ 1 file changed, 5 insertions(+)
+
+diff --git a/CORE/SME/src/sme_common/sme_Api.c b/CORE/SME/src/sme_common/sme_Api.c
+index ea84279..a5964b6 100644
+--- a/CORE/SME/src/sme_common/sme_Api.c
++++ b/CORE/SME/src/sme_common/sme_Api.c
+@@ -15303,12 +15303,17 @@ eHalStatus sme_ProcessChannelChangeResp(tpAniSirGlobal pMac,
+     eCsrRoamResult roamResult;
+     tpSwitchChannelParams pChnlParams = (tpSwitchChannelParams) pMsgBuf;
+     tANI_U32 SessionId = pChnlParams->peSessionId;
++    tpPESession psessionEntry;
+ 
+     roam_info = vos_mem_malloc(sizeof(*roam_info));
+     if (!roam_info)
+         return eHAL_STATUS_FAILED_ALLOC;
+     vos_mem_zero(roam_info, sizeof(*roam_info));
+ 
++    psessionEntry = peFindSessionBySessionId(pMac, SessionId);
++    if (psessionEntry)
++	    roam_info->staId = psessionEntry->staId;
++
+     roam_info->channelChangeRespEvent =
+         (tSirChanChangeResponse *)vos_mem_malloc(
+                                 sizeof(tSirChanChangeResponse));
+-- 
+2.14.5
+
