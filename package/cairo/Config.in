@@ -46,4 +46,8 @@ config BR2_PACKAGE_CAIRO_XML
 	bool "xml support"
 	select BR2_PACKAGE_CAIRO_PNG
 
+config BR2_PACKAGE_CAIRO_OPENVG
+	bool "openvg support"
+	default y
+
 endif

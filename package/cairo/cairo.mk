@@ -116,7 +116,7 @@ CAIRO_CONF_OPTS += --disable-gl --disable-glesv2
 endif
 endif
 
-ifeq ($(BR2_PACKAGE_HAS_LIBOPENVG),y)
+ifeq ($(BR2_PACKAGE_HAS_LIBOPENVG$(BR2_PACKAGE_CAIRO_OPENVG)),yy)
 CAIRO_CONF_OPTS += --enable-vg
 CAIRO_DEPENDENCIES += libopenvg
 else
