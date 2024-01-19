@@ -42,7 +42,7 @@ if grep ^BR2_PACKAGE_WESTON=y $BR2_CONFIG > /dev/null; then
     mkdir -p ${TARGET}/etc/xdg/weston
     ${CP} ${COMMON}/etc/xdg/weston/weston.ini ${TARGET}/etc/xdg/weston
 
-	if [ $"USE_G2D" == "1" ];then
+	if [ "$USE_G2D" == "1" ];then
 		sed -i 's/#use-g2d=1/use-g2d=1/g' ${TARGET}/etc/xdg/weston/weston.ini
 	fi
 	# Activate xwayland if XSERVER is installed
