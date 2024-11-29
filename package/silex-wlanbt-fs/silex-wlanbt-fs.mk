@@ -7,9 +7,8 @@
 ################################################################################
 
 SILEX_WLANBT_FS_VERSION = v4.5.25.38
-SILEX_WLANBT_FS_SITE = http://source.codeaurora.org/external/wlan/qcacld-2.0/snapshot
-SILEX_WLANBT_FS_SOURCE = $(SILEX_WLANBT_FS_VERSION).tar.gz
-#SILEX_WLANBT_FS_SITE_METHOD = wget
+SILEX_WLANBT_FS_SITE = https://git.codelinaro.org/clo/la/platform/vendor/qcom-opensource/wlan/qcacld-2.0
+SILEX_WLANBT_FS_SITE_METHOD = git
 SILEX_WLANBT_FS_LICENSE = GPL-2.0 or BSD
 
 # Options (taken from Silex driver LEA.3.0 4.5.25.38 sxa 1.0.0.019)
