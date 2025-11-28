@@ -262,6 +262,33 @@ define UBOOT_DROP_YYLLOC
 endef
 UBOOT_POST_PATCH_HOOKS += UBOOT_DROP_YYLLOC
 
+# Generate .scmversion after rsync from the original repo
+ifneq ($(UBOOT_OVERRIDE_SRCDIR),)
+
+define UBOOT_GEN_SCMVERSION_FROM_OVERRIDE
+	( \
+		set -e; \
+		repo="$(UBOOT_OVERRIDE_SRCDIR)"; \
+		lv="$(UBOOT_LOCALVERSION)"; \
+		sep="-"; \
+		head="$$(cd "$$repo" && \
+			git tag --points-at HEAD --format='%(objecttype) %(refname:strip=2)' 2>/dev/null | \
+			awk '$$1=="tag"{print $$2; exit}')" ; \
+		if [ -z "$$head" ]; then \
+			head="$$(cd "$$repo" && git rev-parse --verify --short HEAD 2>/dev/null || true)"; \
+			if [ -n "$$head" ]; then \
+				lv=""; sep="+g"; \
+			else \
+				head="$(UBOOT_VERSION)"; lv="$(UBOOT_LOCALVERSION)"; sep="-"; \
+			fi; \
+		fi; \
+		printf "%s%s%s\n" "$$lv" "$$sep" "$$head" > "$(@D)/.scmversion"; \
+	)
+endef
+
+UBOOT_POST_RSYNC_HOOKS += UBOOT_GEN_SCMVERSION_FROM_OVERRIDE
+endif
+
 ifneq ($(ARCH_XTENSA_OVERLAY_FILE),)
 define UBOOT_XTENSA_OVERLAY_EXTRACT
 	$(call arch-xtensa-overlay-extract,$(@D),u-boot)
