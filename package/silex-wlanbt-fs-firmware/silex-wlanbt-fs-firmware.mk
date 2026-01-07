@@ -6,7 +6,7 @@
 #
 ################################################################################
 
-SILEX_WLANBT_FS_FIRMWARE_VERSION = v4.5.25.38-0
+SILEX_WLANBT_FS_FIRMWARE_VERSION = v4.5.25.38-1
 SILEX_WLANBT_FS_FIRMWARE_SITE = $(TOPDIR)/package/silex-wlanbt-fs-firmware
 SILEX_WLANBT_FS_FIRMWARE_SOURCE = silex-wlanbt-fs-firmware-$(SILEX_WLANBT_FS_FIRMWARE_VERSION).tar.bz2
 SILEX_WLANBT_FS_FIRMWARE_SITE_METHOD = file
@@ -15,7 +15,7 @@ SILEX_WLANBT_FS_FIRMWARE_LICENSE = Proprietary
 
 # Also add firmware files
 SILEX_WLANBT_FS_FIRMWARE_FIRMWARE_FILES = bdwlan30.bin otp30.bin qwlan30.bin \
-	utf30.bin utfbd30.bin COPYRIGHT
+	utf30.bin utfbd30.bin regulatory.db COPYRIGHT
 SILEX_WLANBT_FS_FIRMWARE_FIRMWARE_DIRS = qca wlan
 
 # Subcommand to install single firmware files
