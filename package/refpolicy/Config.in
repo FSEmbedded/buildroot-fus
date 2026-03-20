@@ -42,7 +42,8 @@ config BR2_PACKAGE_REFPOLICY_UPSTREAM_VERSION
 		&& BR2_USE_MMU \
 		&& BR2_ENABLE_LOCALE \
 		&& BR2_USE_WCHAR \
-		&& !BR2_STATIC_LIBS
+		&& !BR2_STATIC_LIBS \
+		&& BR2_TOOLCHAIN_GCC_AT_LEAST_4_9
 	help
 	  Use the refpolicy as provided by Buildroot.
 

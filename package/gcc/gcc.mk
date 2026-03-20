@@ -18,6 +18,9 @@ GCC_SITE = $(BR2_GNU_MIRROR:/=)/gcc/gcc-$(GCC_VERSION)
 GCC_SOURCE = gcc-$(GCC_VERSION).tar.xz
 endif
 
+HOST_GCC_LICENSE = GPL-2.0, GPL-3.0, LGPL-2.1, LGPL-3.0
+HOST_GCC_LICENSE_FILES = COPYING COPYING3 COPYING.LIB COPYING3.LIB
+
 #
 # Xtensa special hook
 #
@@ -253,7 +256,7 @@ HOST_GCC_COMMON_CONF_OPTS += --with-mode=$(GCC_TARGET_MODE)
 endif
 
 # Enable proper double/long double for SPE ABI
-ifeq ($(BR2_powerpc_SPE),y)
+ifeq ($(BR2_POWERPC_CPU_HAS_SPE),y)
 HOST_GCC_COMMON_CONF_OPTS += \
 	--enable-obsolete \
 	--enable-e500_double \

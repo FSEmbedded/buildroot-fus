@@ -4,7 +4,7 @@
 #
 ################################################################################
 
-EDK2_VERSION = edk2-stable202208
+EDK2_VERSION = edk2-stable202308
 EDK2_SITE = https://github.com/tianocore/edk2
 EDK2_SITE_METHOD = git
 EDK2_LICENSE = BSD-2-Clause-Patent
@@ -16,8 +16,15 @@ EDK2_INSTALL_IMAGES = YES
 
 ifeq ($(BR2_ENABLE_DEBUG),y)
 EDK2_BUILD_TYPE = DEBUG
+ifeq ($(BR2_TARGET_EDK2_OVMF_DEBUG_ON_SERIAL),y)
+# DEBUG_ON_SERIAL_PORT is only tested to be set, so don't disable it, as
+# it would still be set.
+EDK2_BUILD_OPTS += -DDEBUG_ON_SERIAL_PORT
+endif
 else
 EDK2_BUILD_TYPE = RELEASE
+# DEBUG_ON_SERIAL_PORT is only valid in debug builds, so useless to set
+# it (enabled or disabled) on a relase build.
 endif
 
 # Build system notes.
@@ -128,6 +135,12 @@ define EDK2_PRE_BUILD_QEMU_SBSA
 	mkdir -p $(EDK2_BUILD_PACKAGES)/Platform/Qemu/Sbsa
 	ln -srf $(BINARIES_DIR)/{bl1.bin,fip.bin} $(EDK2_BUILD_PACKAGES)/Platform/Qemu/Sbsa/
 endef
+
+else ifeq ($(BR2_TARGET_EDK2_PLATFORM_OVMF_RISCV),y)
+EDK2_ARCH = RISCV64
+EDK2_PACKAGE_NAME = OvmfPkg/RiscVVirt
+EDK2_PLATFORM_NAME = RiscVVirtQemu
+EDK2_BUILD_DIR = $(EDK2_PLATFORM_NAME)
 
 endif
 

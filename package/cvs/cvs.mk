@@ -18,17 +18,17 @@ CVS_CONF_ENV = \
 	ac_cv_func_working_mktime=yes \
 	cvs_cv_func_printf_ptr=yes
 
-CVS_CONF_OPTS = \
-	--disable-old-info-format-support \
-	--with-editor=/bin/vi
+CVS_CONFIGURE_ARGS = --disable-old-info-format-support
 ifeq ($(BR2_PACKAGE_CVS_SERVER),y)
-CVS_CONF_OPTS += --enable-server
+CVS_CONFIGURE_ARGS += --enable-server
 else
-CVS_CONF_OPTS += --disable-server
+CVS_CONFIGURE_ARGS += --disable-server
 endif
 ifeq ($(BR2_PACKAGE_ZLIB),y)
-CVS_CONF_OPTS += --with-external-zlib
+CVS_CONFIGURE_ARGS += --with-external-zlib
 endif
+
+CVS_CONF_OPTS = $(CVS_CONFIGURE_ARGS)
 
 define CVS_BZIP_UNPACK
 	$(BZCAT) $(@D)/cvs-$(CVS_VERSION).tar.bz2 | tar -C $(BUILD_DIR) $(TAR_OPTIONS) -

@@ -47,6 +47,16 @@ NETSNMP_CONFIG_SCRIPTS = net-snmp-config
 # We're patching configure.d/config_project_types
 NETSNMP_AUTORECONF = YES
 
+define NETSNMP_USERS
+	snmp -1 snmp -1 * - - - snmpd user
+endef
+
+ifeq ($(BR2_INIT_SYSTEMD),y)
+NETSNMP_CONF_OPTS += --with-systemd
+else
+NETSNMP_CONF_OPTS += --without-systemd
+endif
+
 ifeq ($(BR2_ENDIAN),"BIG")
 NETSNMP_CONF_OPTS += --with-endianness=big
 else
@@ -109,6 +119,10 @@ ifeq ($(BR2_PACKAGE_NETSNMP_SERVER),y)
 define NETSNMP_INSTALL_INIT_SYSV
 	$(INSTALL) -D -m 0755 package/netsnmp/S59snmpd \
 		$(TARGET_DIR)/etc/init.d/S59snmpd
+endef
+define NETSNMP_INSTALL_INIT_SYSTEMD
+	$(INSTALL) -D -m 0644 package/netsnmp/snmpd.service \
+		$(TARGET_DIR)/usr/lib/systemd/system/snmpd.service
 endef
 endif
 

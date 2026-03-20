@@ -55,6 +55,16 @@ config BR2_HOST_GCC_AT_LEAST_9
 	default y if BR2_HOST_GCC_VERSION = "9"
 	select BR2_HOST_GCC_AT_LEAST_8
 
+config BR2_HOST_GCC_AT_LEAST_10
+	bool
+	default y if BR2_HOST_GCC_VERSION = "10"
+	select BR2_HOST_GCC_AT_LEAST_9
+
+config BR2_HOST_GCC_AT_LEAST_11
+	bool
+	default y if BR2_HOST_GCC_VERSION = "11"
+	select BR2_HOST_GCC_AT_LEAST_10
+
 # When adding new entries above, be sure to update
 # the HOSTCC_MAX_VERSION variable in the Makefile.
 
@@ -464,7 +474,7 @@ config BR2_STRIP_EXCLUDE_DIRS
 
 choice
 	prompt "gcc optimization level"
-	default BR2_OPTIMIZE_S
+	default BR2_OPTIMIZE_2
 	help
 	  Set the optimization level for gcc
 
@@ -510,6 +520,7 @@ config BR2_OPTIMIZE_2
 	  -falign-loops -falign-labels -ftree-vrp -ftree-pre. Please
 	  note the warning under -fgcse about invoking -O2 on programs
 	  that use computed gotos.
+	  This is the default.
 
 config BR2_OPTIMIZE_3
 	bool "optimization level 3"
@@ -538,7 +549,6 @@ config BR2_OPTIMIZE_S
 	  -falign-loops -falign-labels -freorder-blocks
 	  -freorder-blocks-and-partition -fprefetch-loop-arrays
 	  -ftree-vect-loop-version
-	  This is the default.
 
 config BR2_OPTIMIZE_FAST
 	bool "optimize for fast (may break packages!)"
@@ -752,6 +762,20 @@ config BR2_PER_PACKAGE_DIRECTORIES
 	  packages behave properly with per-package directories.
 
 endmenu
+
+config BR2_TIME_BITS_64
+	bool "Build Y2038-ready code"
+	depends on BR2_TOOLCHAIN_USES_GLIBC && !BR2_ARCH_IS_64
+	help
+	  This option will pass -D_TIME_BITS=64 in the compiler flags
+	  to ensure the glibc C library uses a 64-bit representation
+	  for time_t and other time types, which ensures that
+	  programs/libraries will correctly handle time past year
+	  2038.
+
+	  This option only has an effect with glibc >= 2.34, as
+	  earlier glibc versions did not have support for 64-bit
+	  time_t.
 
 comment "Security Hardening Options"
 

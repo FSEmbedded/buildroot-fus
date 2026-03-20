@@ -15,7 +15,7 @@ POCO_DEPENDENCIES = \
 	pcre2 \
 	zlib \
 	$(if $(BR2_PACKAGE_POCO_CRYPTO),openssl) \
-	$(if $(BR2_PACKAGE_POCO_DATA_MYSQL),mysql) \
+	$(if $(BR2_PACKAGE_POCO_DATA_MYSQL),mariadb) \
 	$(if $(BR2_PACKAGE_POCO_DATA_SQLITE),sqlite) \
 	$(if $(BR2_PACKAGE_POCO_DATA_PGSQL),postgresql) \
 	$(if $(BR2_PACKAGE_POCO_NETSSL_OPENSSL),openssl) \
@@ -68,6 +68,7 @@ define POCO_CONFIGURE_CMDS
 	(cd $(@D); $(TARGET_MAKE_ENV) ./configure \
 		--config=Linux \
 		--prefix=/usr \
+		--cflags=-std=c++14 \
 		--ldflags="$(POCO_LDFLAGS)" \
 		--omit="$(POCO_OMIT)" \
 		$(POCO_CONF_OPTS) \
