@@ -4,7 +4,7 @@
 #
 ################################################################################
 
-NEARD_VERSION = 0.18
+NEARD_VERSION = 0.19
 NEARD_SITE = https://git.kernel.org/pub/scm/network/nfc/neard.git/snapshot
 NEARD_LICENSE = GPL-2.0
 NEARD_LICENSE_FILES = COPYING
@@ -16,7 +16,7 @@ NEARD_AUTORECONF_OPTS = --include=$(HOST_DIR)/share/autoconf-archive
 NEARD_CONF_OPTS = --disable-traces
 
 # Autoreconf is missing the m4/ directory, which might actually be missing
-# iff it was the first argument, but unfortunately we are overriding the
+# if it was the first argument, but unfortunately we are overriding the
 # first include directory above. Thus we need that hook here.
 define NEARD_CREATE_M4
 	mkdir -p $(@D)/m4

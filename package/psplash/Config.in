@@ -41,9 +41,19 @@ config BR2_PACKAGE_CONFIG_PSPLASH
 		Configure the colors, font and loading bar with the files
 		psplash-config.h psplash-colors.h and radeon-font.h.
 
+config BR2_PACKAGE_PSPLASH_PROGRESS_BAR
+	bool "enable progress bar"
+	default y
+	help
+	  Enable progress bar management via the "PROGRESS" command.
+
+config BR2_PACKAGE_PSPLASH_STARTUP_MSG
+	bool "enable startup message"
+	default y
+	help
+	  Enable text banner output on startup.
+
 endif
-
-
 
 comment "psplash needs a toolchain w/ wchar"
 	depends on !BR2_USE_WCHAR

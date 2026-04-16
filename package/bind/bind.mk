@@ -4,11 +4,9 @@
 #
 ################################################################################
 
-BIND_VERSION = 9.16.48
+BIND_VERSION = 9.18.44
 BIND_SOURCE= bind-$(BIND_VERSION).tar.xz
 BIND_SITE = https://ftp.isc.org/isc/bind9/$(BIND_VERSION)
-# bind does not support parallel builds.
-BIND_MAKE = $(MAKE1)
 BIND_INSTALL_STAGING = YES
 BIND_LICENSE = MPL-2.0
 BIND_LICENSE_FILES = COPYRIGHT
@@ -24,14 +22,14 @@ BIND_TARGET_SERVER_SBIN += lwresd named named-checkconf named-checkzone
 BIND_TARGET_SERVER_SBIN += named-compilezone rndc rndc-confgen dnssec-dsfromkey
 BIND_TARGET_SERVER_SBIN += dnssec-keyfromlabel dnssec-signzone tsig-keygen
 BIND_TARGET_TOOLS_BIN = dig host nslookup nsupdate
-BIND_CONF_ENV = \
-	BUILD_CC="$(TARGET_CC)" \
-	LIBS=`$(PKG_CONFIG_HOST_BINARY) --libs openssl`
+# avoid potential Debian 12 libtool 2.4.7 bug
+# https://bugs.debian.org/cgi-bin/bugreport.cgi?bug=929396
+BIND_AUTORECONF = YES
 BIND_CONF_OPTS = \
 	--without-cmocka \
 	--without-lmdb \
-	--enable-epoll \
-	--disable-backtrace \
+	--disable-doh \
+	--disable-static \
 	--with-openssl=$(STAGING_DIR)/usr
 
 BIND_DEPENDENCIES = host-pkgconf libuv openssl
@@ -49,6 +47,13 @@ BIND_CONF_OPTS += --with-zlib
 BIND_DEPENDENCIES += zlib
 else
 BIND_CONF_OPTS += --without-zlib
+endif
+
+ifeq ($(BR2_PACKAGE_JEMALLOC),y)
+BIND_CONF_OPTS += --with-jemalloc
+BIND_DEPENDENCIES += jemalloc
+else
+BIND_CONF_OPTS += --without-jemalloc
 endif
 
 ifeq ($(BR2_PACKAGE_JSON_C),y)
@@ -93,28 +98,10 @@ else
 BIND_CONF_OPTS += --with-libxml2=no
 endif
 
-# Used by dnssec-keymgr
-ifeq ($(BR2_PACKAGE_PYTHON_PLY),y)
-BIND_DEPENDENCIES += host-python-ply
-BIND_CONF_OPTS += --with-python=$(HOST_DIR)/bin/python
-else
-BIND_CONF_OPTS += --with-python=no
-endif
-
 ifeq ($(BR2_PACKAGE_READLINE),y)
 BIND_DEPENDENCIES += readline
 else
 BIND_CONF_OPTS += --with-readline=no
-endif
-
-ifeq ($(BR2_STATIC_LIBS),y)
-BIND_CONF_OPTS += \
-	--without-dlopen \
-	--without-libtool
-else
-BIND_CONF_OPTS += \
-	--with-dlopen \
-	--with-libtool
 endif
 
 define BIND_TARGET_REMOVE_SERVER

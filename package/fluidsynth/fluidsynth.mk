@@ -4,13 +4,16 @@
 #
 ################################################################################
 
-FLUIDSYNTH_VERSION = 2.3.3
+FLUIDSYNTH_VERSION = 2.4.3
 FLUIDSYNTH_SITE = $(call github,FluidSynth,fluidsynth,v$(FLUIDSYNTH_VERSION))
 FLUIDSYNTH_LICENSE = LGPL-2.1+
 FLUIDSYNTH_LICENSE_FILES = LICENSE
 FLUIDSYNTH_CPE_ID_VENDOR = fluidsynth
 FLUIDSYNTH_INSTALL_STAGING = YES
 FLUIDSYNTH_DEPENDENCIES = libglib2
+
+# 0001-Fix-a-nullpointer-dereference-during-legato-mode.patch
+FLUIDSYNTH_IGNORE_CVES += CVE-2025-56225
 
 ifeq ($(BR2_PACKAGE_FLUIDSYNTH_ALSA_LIB),y)
 FLUIDSYNTH_CONF_OPTS += -Denable-alsa=1

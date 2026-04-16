@@ -66,14 +66,14 @@ config BR2_PACKAGE_RPI_FIRMWARE_VARIANT_PI4_DB
 config BR2_PACKAGE_RPI_FIRMWARE_CONFIG_FILE
 	string "Path to a file stored as boot/config.txt"
 	help
-	  Path to a file stored as config.txt in the boot partiton
+	  Path to a file stored as config.txt in the boot partition
 	  of the generated SD card image.
 
 config BR2_PACKAGE_RPI_FIRMWARE_CMDLINE_FILE
 	string "Path to a file stored as boot/cmdline.txt"
 	default "board/raspberrypi/cmdline.txt"  # legacy
 	help
-	  Path to a file stored as cmdline.txt in the boot partiton
+	  Path to a file stored as cmdline.txt in the boot partition
 	  of the generated SD card image.
 
 config BR2_PACKAGE_RPI_FIRMWARE_INSTALL_DTBS
@@ -99,17 +99,5 @@ config BR2_PACKAGE_RPI_FIRMWARE_INSTALL_DTB_OVERLAYS
 	  Say 'y' here if you need to load one or more of the DTB
 	  overlays, to support HATs (Hardware Attached on Top, add-on
 	  modules).
-
-config BR2_PACKAGE_RPI_FIRMWARE_INSTALL_VCDBG
-	bool "vcdbg"
-	depends on BR2_arm # prebuilt arm binary, rpi-userland
-	depends on BR2_TOOLCHAIN_USES_GLIBC
-	depends on BR2_INSTALL_LIBSTDCPP # rpi-userland
-	help
-	  Install vcdbg, to help debug communication with the GPU.
-
-comment "vcdbg needs a glibc toolchain w/ C++"
-	depends on BR2_arm
-	depends on !BR2_TOOLCHAIN_USES_GLIBC || !BR2_INSTALL_LIBSTDCPP
 
 endif # BR2_PACKAGE_RPI_FIRMWARE

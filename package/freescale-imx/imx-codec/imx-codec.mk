@@ -4,7 +4,7 @@
 #
 ################################################################################
 
-IMX_CODEC_VERSION = 4.7.2
+IMX_CODEC_VERSION = 4.8.2
 IMX_CODEC_SITE = $(FREESCALE_IMX_SITE)
 IMX_CODEC_SOURCE = imx-codec-$(IMX_CODEC_VERSION).bin
 IMX_CODEC_INSTALL_STAGING = YES
@@ -33,30 +33,12 @@ endef
 # libraries, but we only need one of them.
 
 # Upstream installs libraries into usr/lib/imx-mm, but the dynamic
-# loader only looks in usr/lib, so move the libraries there. However
-# keep usr/lib/imx-mm/audio-codec/wrap/*, these files are referenced
-# in gstreamer in usr/share/beep_registry*.cf.
+# loader only looks in usr/lib, so move the libraries there
 define IMX_CODEC_FIXUP_TARGET_PATH
-	find $(TARGET_DIR)/usr/lib/imx-mm/audio-codec -maxdepth 1 \
-		-not -type d -exec mv {} $(TARGET_DIR)/usr/lib \;
-	echo "IMX audio codecs moved to /usr/lib" \
-		> $(TARGET_DIR)/usr/lib/imx-mm/audio-codec/README.txt
-	find $(TARGET_DIR)/usr/lib/imx-mm/video-codec -maxdepth 1 \
-		-not -type d -exec mv {} $(TARGET_DIR)/usr/lib \;
-	echo "IMX video codecs moved to /usr/lib" \
-		> $(TARGET_DIR)/usr/lib/imx-mm/video-codec/README.txt
+	find $(TARGET_DIR)/usr/lib/imx-mm -not -type d \
+		-exec mv {} $(TARGET_DIR)/usr/lib \;
+	rm -rf $(TARGET_DIR)/usr/lib/imx-mm
 endef
-define IMX_CODEC_FIXUP_STAGING_PATH
-	find $(STAGING_DIR)/usr/lib/imx-mm/audio-codec -maxdepth 1 \
-		-not -type d -exec mv {} $(STAGING_DIR)/usr/lib \;
-	echo "IMX audio codecs moved to /usr/lib" \
-		> $(STAGING_DIR)/usr/lib/imx-mm/audio-codec/README.txt
-	find $(STAGING_DIR)/usr/lib/imx-mm/video-codec -maxdepth 1 \
-		-not -type d -exec mv {} $(STAGING_DIR)/usr/lib \;
-	echo "IMX video codecs moved to /usr/lib" \
-		> $(STAGING_DIR)/usr/lib/imx-mm/video-codec/README.txt
-endef
-
-IMX_CODEC_POST_INSTALL_TARGET_HOOKS += IMX_CODEC_FIXUP_TARGET_PATH IMX_CODEC_FIXUP_STAGING_PATH
+IMX_CODEC_POST_INSTALL_TARGET_HOOKS += IMX_CODEC_FIXUP_TARGET_PATH
 
 $(eval $(autotools-package))

@@ -4,7 +4,7 @@
 #
 ################################################################################
 
-HOSTAPD_VERSION = 2.10
+HOSTAPD_VERSION = 2.11
 HOSTAPD_SITE = http://w1.fi/releases
 HOSTAPD_SUBDIR = hostapd
 HOSTAPD_CONFIG = $(HOSTAPD_DIR)/$(HOSTAPD_SUBDIR)/.config
@@ -16,6 +16,10 @@ HOSTAPD_LICENSE_FILES = README
 HOSTAPD_CPE_ID_VENDOR = w1.fi
 HOSTAPD_SELINUX_MODULES = hostapd
 
+# 0001-RADIUS-Drop-pending-request-only-when-accepting-the-response.patch
+# 0002-RADIUS-Fix-pending-request-dropping.patch
+HOSTAPD_IGNORE_CVES += CVE-2025-24912
+
 HOSTAPD_CONFIG_ENABLE = \
 	CONFIG_INTERNAL_LIBTOMMATH \
 	CONFIG_DEBUG_FILE \
@@ -25,7 +29,7 @@ HOSTAPD_CONFIG_DISABLE =
 
 # Try to use openssl if it's already available
 ifeq ($(BR2_PACKAGE_LIBOPENSSL),y)
-HOSTAPD_DEPENDENCIES += host-pkgconf libopenssl
+HOSTAPD_DEPENDENCIES += libopenssl
 HOSTAPD_LIBS += `$(PKG_CONFIG_HOST_BINARY) --libs openssl`
 HOSTAPD_CONFIG_EDITS += 's/\#\(CONFIG_TLS=openssl\)/\1/'
 else
@@ -53,6 +57,7 @@ endif
 ifeq ($(BR2_PACKAGE_HOSTAPD_HAS_WIFI_DRIVERS),y)
 HOSTAPD_CONFIG_ENABLE += \
 	CONFIG_HS20 \
+	CONFIG_IEEE80211BE \
 	CONFIG_IEEE80211AX \
 	CONFIG_IEEE80211AC \
 	CONFIG_IEEE80211N \

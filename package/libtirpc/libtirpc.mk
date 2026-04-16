@@ -4,12 +4,12 @@
 #
 ################################################################################
 
-LIBTIRPC_VERSION = 1.3.3
+LIBTIRPC_VERSION = 1.3.6
 LIBTIRPC_SOURCE = libtirpc-$(LIBTIRPC_VERSION).tar.bz2
 LIBTIRPC_SITE = http://downloads.sourceforge.net/project/libtirpc/libtirpc/$(LIBTIRPC_VERSION)
 LIBTIRPC_LICENSE = BSD-3-Clause
 LIBTIRPC_LICENSE_FILES = COPYING
-LIBTIRPC_CPE_ID_VENDOR = libtirpc_project
+LIBTIRPC_CPE_ID_VALID = YES
 
 LIBTIRPC_INSTALL_STAGING = YES
 
@@ -24,6 +24,13 @@ else
 LIBTIRPC_CONF_OPTS += --disable-gssapi
 endif
 HOST_LIBTIRPC_CONF_OPTS = --disable-gssapi
+
+ifeq ($(BR2_PACKAGE_LIBTIRPC_RPCDB),y)
+LIBTIRPC_CONF_OPTS += --enable-rpcdb
+else
+LIBTIRPC_CONF_OPTS += --disable-rpcdb
+endif
+HOST_LIBTIRPC_CONF_OPTS += --disable-rpcdb
 
 $(eval $(autotools-package))
 $(eval $(host-autotools-package))

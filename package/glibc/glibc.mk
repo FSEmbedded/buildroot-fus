@@ -7,69 +7,49 @@
 # Generate version string using:
 #   git describe --match 'glibc-*' --abbrev=40 origin/release/MAJOR.MINOR/master | cut -d '-' -f 2-
 # When updating the version, please also update localedef
-GLIBC_VERSION = 2.36-128-gb9b7d6a27aa0632f334352fa400771115b3c69b7
-
-# Upstream doesn't officially provide an https download link.
-# There is one (https://sourceware.org/git/glibc.git) but it's not reliable,
-# sometimes the connection times out. So use an unofficial github mirror.
-# When updating the version, check it on the official repository;
-# *NEVER* decide on a version string by looking at the mirror.
-# Then check that the mirror has been synced already (happens once a day.)
-GLIBC_SITE = $(call github,bminor,glibc,$(GLIBC_VERSION))
+GLIBC_VERSION = 2.41-123-gfb4db64a04ad6c96cd1fbb7e02eb59323b1f2ac2
+GLIBC_SITE = https://sourceware.org/git/glibc.git
+GLIBC_SITE_METHOD = git
 
 GLIBC_LICENSE = GPL-2.0+ (programs), LGPL-2.1+, BSD-3-Clause, MIT (library)
 GLIBC_LICENSE_FILES = COPYING COPYING.LIB LICENSES
 GLIBC_CPE_ID_VENDOR = gnu
 
-# Extract the base version (e.g. 2.36) from GLIBC_VERSION in order to
+# Extract the base version (e.g. 2.38) from GLIBC_VERSION in order to
 # allow proper matching with the CPE database.
 GLIBC_CPE_ID_VERSION = $(word 1, $(subst -,$(space),$(GLIBC_VERSION)))
 
-# Fixed by b0e7888d1fa2dbd2d9e1645ec8c796abf78880b9, which is between
-# 2.36 and the version we're really using
-GLIBC_IGNORE_CVES += CVE-2022-39046
+# Fixed by glibc-2.41-57-g84bdbf8a6f2fdafd3661489dbb7f79835a52da82
+GLIBC_IGNORE_CVES += CVE-2025-5745
 
-# Fixed by 4ea972b7edd7e36610e8cde18bf7a8149d7bac4f, which is between
-# 2.36 and the version we're really using
-GLIBC_IGNORE_CVES += CVE-2023-4527
+# Fixed by glibc-2.41-60-g0c76c951620f9e12df2a89b2c684878b55bb6795
+GLIBC_IGNORE_CVES += CVE-2025-5702
 
-# Fixed by a9728f798ec7f05454c95637ee6581afaa9b487d, which is between
-# 2.36 and the version we're really using
-GLIBC_IGNORE_CVES += CVE-2023-4806
+# Fixed by glibc-2.41-64-g1e16d0096d80a6e12d5bfa8e0aafdd13c47efd65
+GLIBC_IGNORE_CVES += CVE-2025-8058
 
-# Fixed by 22955ad85186ee05834e47e665056148ca07699c, which is between
-# 2.36 and the version we're really using.
-GLIBC_IGNORE_CVES += CVE-2023-4911
+# Fixed by glibc-2.41-121-g1e2c1ea4307197ccece0cda574bcfebf9080894c
+GLIBC_IGNORE_CVES += CVE-2026-0861
 
-# Fixed by 856bac55f98dc840e7c27cfa82262b933385de90, which is between
-# 2.36 and the version we're really using.
-GLIBC_IGNORE_CVES += CVE-2023-5156
+# Fixed by glibc-2.41-122-g15c9839a0b853f552b4ed9047841b6223f3c104d
+GLIBC_IGNORE_CVES += CVE-2026-0915
 
-# Fixed by d1a83b6767f68b3cb5b4b4ea2617254acd040c82, which is between
-# 2.36 and the version we're really using.
-GLIBC_IGNORE_CVES += CVE-2023-6246
+# Fixed by glibc-2.41-123-gfb4db64a04ad6c96cd1fbb7e02eb59323b1f2ac2
+GLIBC_IGNORE_CVES += CVE-2025-15281
 
-# Fixed by 2bc9d7c002bdac38b5c2a3f11b78e309d7765b83, which is between
-# 2.36 and the version we're really using.
-GLIBC_IGNORE_CVES += CVE-2023-6779
-
-# Fixed by b9b7d6a27aa0632f334352fa400771115b3c69b7, which is between
-# 2.36 and the version we're really using.
-GLIBC_IGNORE_CVES += CVE-2023-6780
-
-# All these CVEs are considered as not being security issues by
+# This CVE is considered as not being security issues by
 # upstream glibc:
 #  https://security-tracker.debian.org/tracker/CVE-2010-4756
-#  https://security-tracker.debian.org/tracker/CVE-2019-1010022
-#  https://security-tracker.debian.org/tracker/CVE-2019-1010023
-#  https://security-tracker.debian.org/tracker/CVE-2019-1010024
-#  https://security-tracker.debian.org/tracker/CVE-2019-1010025
-GLIBC_IGNORE_CVES += \
-	CVE-2010-4756 \
-	CVE-2019-1010022 \
-	CVE-2019-1010023 \
-	CVE-2019-1010024 \
-	CVE-2019-1010025
+GLIBC_IGNORE_CVES += CVE-2010-4756
+
+# Fixed by glibc-2.41-121-g1e2c1ea4307197ccece0cda574bcfebf9080894c
+GLIBC_IGNORE_CVES += CVE-2026-0861
+
+# Fixed by glibc-2.41-122-g15c9839a0b853f552b4ed9047841b6223f3c104d
+GLIBC_IGNORE_CVES += CVE-2026-0915
+
+# Fixed by glibc-2.41-123-gfb4db64a04ad6c96cd1fbb7e02eb59323b1f2ac2
+GLIBC_IGNORE_CVES += CVE-2025-15281
 
 # glibc is part of the toolchain so disable the toolchain dependency
 GLIBC_ADD_TOOLCHAIN_DEPENDENCY = NO
@@ -82,8 +62,6 @@ GLIBC_DEPENDENCIES = host-gcc-initial linux-headers host-bison host-gawk \
 GLIBC_SUBDIR = build
 
 GLIBC_INSTALL_STAGING = YES
-
-GLIBC_INSTALL_STAGING_OPTS = install_root=$(STAGING_DIR) install
 
 # Thumb build is broken, build in ARM mode
 ifeq ($(BR2_ARM_INSTRUCTIONS_THUMB),y)
@@ -164,10 +142,6 @@ endif
 # Glibc nowadays can be build with optimization flags f.e. -Os
 
 GLIBC_CFLAGS = $(TARGET_OPTIMIZATION)
-# crash in qemu-system-nios2 with -Os
-ifeq ($(BR2_nios2),y)
-GLIBC_CFLAGS += -O2
-endif
 
 # glibc can't be built without optimization
 ifeq ($(BR2_OPTIMIZE_0),y)
@@ -199,6 +173,7 @@ define GLIBC_CONFIGURE_CMDS
 		--disable-werror \
 		--without-gd \
 		--with-headers=$(STAGING_DIR)/usr/include \
+		$(if $(BR2_aarch64)$(BR2_aarch64_be),--enable-mathvec) \
 		$(GLIBC_CONF_OPTS))
 	$(GLIBC_ADD_MISSING_STUB_H)
 endef
@@ -209,7 +184,7 @@ endef
 #
 
 GLIBC_LIBS_LIB = \
-	ld*.so.* libanl.so.* libc.so.* libcrypt.so.* libdl.so.* libgcc_s.so.* \
+	ld*.so.* libanl.so.* libc.so.* libdl.so.* libgcc_s.so.* \
 	libm.so.* libpthread.so.* libresolv.so.* librt.so.* \
 	libutil.so.* libnss_files.so.* libnss_dns.so.* libmvec.so.*
 

@@ -4,14 +4,17 @@
 #
 ################################################################################
 
-ifeq ($(BR2_PACKAGE_OPENJDK_VERSION_17),y)
-OPENJDK_VERSION_MAJOR = 17
-OPENJDK_VERSION_MINOR = 0.8.1+1
+ifeq ($(BR2_PACKAGE_OPENJDK_VERSION_21),y)
+OPENJDK_VERSION_MAJOR = 21
+OPENJDK_VERSION_MINOR = 0.4
+OPENJDK_VERSION_BUILD = 7
+
 else
-OPENJDK_VERSION_MAJOR = 11
-OPENJDK_VERSION_MINOR = 0.20+8
+OPENJDK_VERSION_MAJOR = 17
+OPENJDK_VERSION_MINOR = 0.12
+OPENJDK_VERSION_BUILD = 7
 endif
-OPENJDK_VERSION = $(OPENJDK_VERSION_MAJOR).$(OPENJDK_VERSION_MINOR)
+OPENJDK_VERSION = $(OPENJDK_VERSION_MAJOR).$(OPENJDK_VERSION_MINOR)+$(OPENJDK_VERSION_BUILD)
 OPENJDK_SITE = $(call github,openjdk,jdk$(OPENJDK_VERSION_MAJOR)u,jdk-$(OPENJDK_VERSION))
 
 OPENJDK_LICENSE = GPL-2.0+ with exception
@@ -83,7 +86,6 @@ OPENJDK_CONF_ENV = \
 
 OPENJDK_CONF_OPTS = \
 	--disable-full-docs \
-	--disable-hotspot-gtest \
 	--disable-manpages \
 	--disable-warnings-as-errors \
 	--enable-headless-only \
@@ -107,8 +109,8 @@ OPENJDK_CONF_OPTS = \
 	--with-native-debug-symbols=none \
 	--without-version-pre \
 	--with-sysroot=$(STAGING_DIR) \
-	--with-version-build="$(OPENJDK_VERSION_MAJOR)" \
-	--with-version-string="$(OPENJDK_VERSION_MAJOR)"
+	--with-version-build="$(OPENJDK_VERSION_BUILD)" \
+	--with-version-string="$(OPENJDK_VERSION_MAJOR).$(OPENJDK_VERSION_MINOR)"
 
 # If building for AArch64, use the provided CPU port.
 ifeq ($(BR2_aarch64),y)

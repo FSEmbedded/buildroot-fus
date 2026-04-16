@@ -4,7 +4,7 @@ config BR2_PACKAGE_WAFFLE_SUPPORTS_GLX
 
 config BR2_PACKAGE_WAFFLE_SUPPORTS_WAYLAND
 	bool
-	default y if BR2_PACKAGE_WAYLAND && BR2_PACKAGE_HAS_LIBEGL_WAYLAND
+	default y if BR2_PACKAGE_WAYLAND && BR2_PACKAGE_HAS_LIBEGL
 
 config BR2_PACKAGE_WAFFLE_SUPPORTS_X11_EGL
 	bool
@@ -44,4 +44,4 @@ config BR2_PACKAGE_WAFFLE
 	  [1] http://piglit.freedesktop.org
 	  [2] http://github.com/apitrace/apitrace#readme
 
-	  http://www.waffle-gl.org
+	  https://waffle.freedesktop.org/

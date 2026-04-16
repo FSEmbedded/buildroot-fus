@@ -91,13 +91,6 @@ PYTHON_PYQT5_DEPENDENCIES += qt5webchannel
 PYTHON_PYQT5_MODULES += QtWebChannel
 endif
 
-ifeq ($(BR2_PACKAGE_QT5WEBKIT),y)
-PYTHON_PYQT5_DEPENDENCIES += qt5webkit
-PYTHON_PYQT5_MODULES += \
-	QtWebKit \
-	$(if $(BR2_PACKAGE_QT5BASE_WIDGETS),QtWebKitWidgets)
-endif
-
 ifeq ($(BR2_PACKAGE_QT5WEBSOCKETS),y)
 PYTHON_PYQT5_DEPENDENCIES += qt5websockets
 PYTHON_PYQT5_MODULES += QtWebSockets
@@ -139,7 +132,7 @@ endef
 
 # The file "qt.conf" can be used to override the hard-coded paths that are
 # compiled into the Qt library. We need it to make "qmake" relocatable and
-# tweak the per-package install pathes
+# tweak the per-package install paths
 PYTHON_PYQT5_PRE_CONFIGURE_HOOKS += QT5_QT_CONF_FIXUP
 
 PYTHON_PYQT5_CONF_OPTS = \

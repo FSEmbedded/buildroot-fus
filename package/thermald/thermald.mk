@@ -4,7 +4,7 @@
 #
 ################################################################################
 
-THERMALD_VERSION = 2.5.1
+THERMALD_VERSION = 2.5.6
 THERMALD_SITE = $(call github,intel,thermal_daemon,v$(THERMALD_VERSION))
 # fetched from Github, with no configure script
 THERMALD_AUTORECONF = YES
@@ -32,7 +32,7 @@ endef
 THERMALD_PRE_CONFIGURE_HOOKS += THERMALD_GTK_DOC_HOOK
 
 # Autoreconf is missing the m4/ directory, which might actually be missing
-# iff it was the first argument, but unfortunately we are overriding the
+# if it was the first argument, but unfortunately we are overriding the
 # first include directory above. Thus we need that hook here.
 define THERMALD_CREATE_M4
 	mkdir -p $(@D)/m4

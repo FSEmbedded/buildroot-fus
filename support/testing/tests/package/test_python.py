@@ -17,6 +17,9 @@ class TestPythonBase(infra.basetest.BRTest):
                            kernel="builtin",
                            options=["-initrd", cpio_file])
         self.emulator.login()
+        # Disable Python colors for all Python tests, to make pexpect
+        # pattern matching easier.
+        self.assertRunOk("export NO_COLOR=1")
 
     def version_test(self, version, timeout=-1):
         cmd = self.interpreter + " --version 2>&1 | grep '^{}'".format(version)
@@ -29,7 +32,7 @@ class TestPythonBase(infra.basetest.BRTest):
     def libc_time_test(self, timeout=-1):
         cmd = self.interpreter + " -c '"
         cmd += "import ctypes;"
-        cmd += "libc = ctypes.cdll.LoadLibrary(\"libc.so.1\");"
+        cmd += "libc = ctypes.cdll.LoadLibrary(\"libc.so.6\");"
         cmd += "print(libc.time(None))'"
         self.assertRunOk(cmd, timeout)
 
