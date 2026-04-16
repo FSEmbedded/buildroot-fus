@@ -6,7 +6,7 @@
 
 ifeq ($(BR2_PACKAGE_FREESCALE_IMX),y)
 # IMX needs special variant from NXP
-LIBDRM_VERSION = lf-5.15.71-2.2.1
+LIBDRM_VERSION = lf-6.6.52-2.2.2
 LIBDRM_SITE = https://github.com/nxp-imx/libdrm-imx.git
 LIBDRM_SITE_METHOD = git
 LIBDRM_LICENSE = MIT

@@ -4,8 +4,7 @@
 #
 ################################################################################
 
-IMX_GST1_PLUGINS_GOOD_VERSION = lf-5.15.71-2.2.1
-IMX_GST1_PLUGINS_GOOD_SOURCE = imx-gst-plugins-good-1.20.3.tar.gz
+IMX_GST1_PLUGINS_GOOD_VERSION = lf-6.6.52-2.2.2
 IMX_GST1_PLUGINS_GOOD_SITE = https://github.com/nxp-imx/gst-plugins-good.git
 IMX_GST1_PLUGINS_GOOD_SITE_METHOD = git
 IMX_GST1_PLUGINS_GOOD_GIT_SUBMODULES = YES

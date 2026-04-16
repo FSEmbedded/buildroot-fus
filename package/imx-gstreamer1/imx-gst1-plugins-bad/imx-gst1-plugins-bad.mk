@@ -4,8 +4,7 @@
 #
 ################################################################################
 
-IMX_GST1_PLUGINS_BAD_VERSION = lf-5.15.71-2.2.1
-IMX_GST1_PLUGINS_BAD_SOURCE = imx-gst-plugins-bad-1.20.3.tar.gz
+IMX_GST1_PLUGINS_BAD_VERSION = lf-6.6.52-2.2.2
 IMX_GST1_PLUGINS_BAD_SITE = https://github.com/nxp-imx/gst-plugins-bad.git
 IMX_GST1_PLUGINS_BAD_SITE_METHOD = git
 IMX_GST1_PLUGINS_BAD_GIT_SUBMODULES = YES
@@ -15,7 +14,7 @@ IMX_GST1_PLUGINS_BAD_INSTALL_STAGING = YES
 IMX_GST1_PLUGINS_BAD_LICENSE_FILES = COPYING
 IMX_GST1_PLUGINS_BAD_LICENSE := LGPL-2.0+, LGPL-2.1+
 
-IMX_GST1_PLUGINS_BAD_CFLAGS = $(TARGET_CFLAGS) -std=c99 -D_GNU_SOURCE
+IMX_GST1_PLUGINS_BAD_CFLAGS = $(TARGET_CFLAGS) -std=gnu17 -D_GNU_SOURCE
 IMX_GST1_PLUGINS_BAD_LDFLAGS = $(TARGET_LDFLAGS) $(TARGET_NLS_LIBS)
 
 IMX_GST1_PLUGINS_BAD_CONF_OPTS = \
@@ -49,7 +48,6 @@ IMX_GST1_PLUGINS_BAD_CONF_OPTS += \
 	-Dflite=disabled \
 	-Dgs=disabled \
 	-Dgsm=disabled \
-	-Dkate=disabled \
 	-Dladspa=disabled \
 	-Dldac=disabled \
 	-Dlv2=disabled \

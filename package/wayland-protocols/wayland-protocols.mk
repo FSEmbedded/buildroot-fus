@@ -5,7 +5,7 @@
 ################################################################################
 
 ifeq ($(BR2_PACKAGE_FREESCALE_IMX),y)
-WAYLAND_PROTOCOLS_VERSION = lf-5.15.71-2.2.1
+WAYLAND_PROTOCOLS_VERSION = c7e9c4f5d396cda4051e49b15d7d0e4f91e4efac
 WAYLAND_PROTOCOLS_SITE = https://github.com/nxp-imx/wayland-protocols-imx.git
 WAYLAND_PROTOCOLS_SITE_METHOD = git
 WAYLAND_PROTOCOLS_AUTORECONF = YES

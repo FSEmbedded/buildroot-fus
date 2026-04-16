@@ -4,10 +4,11 @@
 #
 ################################################################################
 
-IMX_GST1_PLUGIN_VERSION = lf-5.15.71-2.2.1
-IMX_GST1_PLUGIN_SOURCE = imx-gst1.0-plugin-4.7.2.tar.gz
+IMX_GST1_PLUGIN_VERSION = lf-6.6.52-2.2.2
 IMX_GST1_PLUGIN_SITE = https://github.com/nxp-imx/imx-gst1.0-plugin.git
 IMX_GST1_PLUGIN_SITE_METHOD = git
+
+#IMX_GST1_PLUGIN_CFLAGS = $(TARGET_CFLAGS) -std=gnu17
 
 # Most is LGPLv2+, but some sources are copied from upstream and are
 # LGPLv2.1+, which essentially makes it LGPLv2.1+
@@ -57,14 +58,14 @@ define IMX_GST1_PLUGIN_IMX_HEADERS
 	mkdir -p $(@D)/libs/linux
 	mkdir -p $(@D)/libs/asm
 	# We need the newest videodev2.h, which in turn needs compiler.h
-	cp $(LINUX_DIR)/usr/include/linux/videodev2.h $(@D)/libs/linux
-	cp $(LINUX_DIR)/usr/include/linux/ipu.h $(@D)/libs/linux
-	cp $(LINUX_DIR)/usr/include/linux/mxcfb.h $(@D)/libs/linux
-	cp $(LINUX_DIR)/usr/include/linux/pxp_device.h $(@D)/libs/linux
-	cp $(LINUX_DIR)/usr/include/linux/pxp_dma.h $(@D)/libs/linux
+	cp $(BUILD_DIR)/linux-headers-custom/usr/include/linux/videodev2.h $(@D)/libs/linux
+	cp $(BUILD_DIR)/linux-headers-custom/usr/include/linux/ipu.h $(@D)/libs/linux
+	cp $(BUILD_DIR)/linux-headers-custom/usr/include/linux/mxcfb.h $(@D)/libs/linux
+	cp $(BUILD_DIR)/linux-headers-custom/usr/include/linux/pxp_device.h $(@D)/libs/linux
+	cp $(BUILD_DIR)/linux-headers-custom/usr/include/linux/pxp_dma.h $(@D)/libs/linux
 	# We need the imx version of dma-buf.h for DMA_BUF_IOCTL_PHYS
-	cp $(LINUX_DIR)/usr/include/linux/dma-buf.h $(@D)/libs/linux
-	cp $(LINUX_DIR)/usr/include/linux/mxc_v4l2.h $(@D)/libs/linux
+	cp $(BUILD_DIR)/linux-headers-custom/usr/include/linux/dma-buf.h $(@D)/libs/linux
+	cp $(BUILD_DIR)/linux-headers-custom/usr/include/linux/mxc_v4l2.h $(@D)/libs/linux
 
 
 endef

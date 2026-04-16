@@ -4,8 +4,7 @@
 #
 ################################################################################
 
-IMX_GST1_PLUGINS_BASE_VERSION = lf-5.15.71-2.2.1
-IMX_GST1_PLUGINS_BASE_SOURCE = imx-gst-plugins-base-1.20.3.tar.gz
+IMX_GST1_PLUGINS_BASE_VERSION = lf-6.6.52-2.2.2
 IMX_GST1_PLUGINS_BASE_SITE = https://github.com/nxp-imx/gst-plugins-base.git
 IMX_GST1_PLUGINS_BASE_SITE_METHOD = git
 IMX_GST1_PLUGINS_BASE_GIT_SUBMODULES = YES
@@ -160,11 +159,11 @@ else
 IMX_GST1_PLUGINS_BASE_CONF_OPTS += -Dencoding=disabled
 endif
 
-ifeq ($(BR2_PACKAGE_IMX_GST1_PLUGINS_BASE_PLUGIN_VIDEOCONVERT),y)
-IMX_GST1_PLUGINS_BASE_CONF_OPTS += -Dvideoconvert=enabled
-else
-IMX_GST1_PLUGINS_BASE_CONF_OPTS += -Dvideoconvert=disabled
-endif
+#ifeq ($(BR2_PACKAGE_IMX_GST1_PLUGINS_BASE_PLUGIN_VIDEOCONVERT),y)
+#IMX_GST1_PLUGINS_BASE_CONF_OPTS += -Dvideoconvert=enabled
+#else
+#IMX_GST1_PLUGINS_BASE_CONF_OPTS += -Dvideoconvert=disabled
+#endif
 
 ifeq ($(BR2_PACKAGE_IMX_GST1_PLUGINS_BASE_PLUGIN_GIO),y)
 IMX_GST1_PLUGINS_BASE_CONF_OPTS += -Dgio=enabled
@@ -232,11 +231,11 @@ else
 IMX_GST1_PLUGINS_BASE_CONF_OPTS += -Dvideorate=disabled
 endif
 
-ifeq ($(BR2_PACKAGE_IMX_GST1_PLUGINS_BASE_PLUGIN_VIDEOSCALE),y)
-IMX_GST1_PLUGINS_BASE_CONF_OPTS += -Dvideoscale=enabled
-else
-IMX_GST1_PLUGINS_BASE_CONF_OPTS += -Dvideoscale=disabled
-endif
+#ifeq ($(BR2_PACKAGE_IMX_GST1_PLUGINS_BASE_PLUGIN_VIDEOSCALE),y)
+#IMX_GST1_PLUGINS_BASE_CONF_OPTS += -Dvideoscale=enabled
+#else
+#IMX_GST1_PLUGINS_BASE_CONF_OPTS += -Dvideoscale=disabled
+#endif
 
 ifeq ($(IMX_BR2_PACKAGE_GST1_PLUGINS_BASE_PLUGIN_VOLUME),y)
 IMX_GST1_PLUGINS_BASE_CONF_OPTS += -Dvolume=enabled

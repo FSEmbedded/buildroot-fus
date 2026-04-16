@@ -4,8 +4,7 @@
 #
 ################################################################################
 
-IMX_GSTREAMER1_VERSION = lf-5.15.71-2.2.1
-IMX_GSTREAMER1_SOURCE = imx-gstreamer-1.20.3.tar.gz
+IMX_GSTREAMER1_VERSION = lf-6.6.52-2.2.2
 IMX_GSTREAMER1_SITE = https://github.com/nxp-imx/gstreamer.git
 IMX_GSTREAMER1_SITE_METHOD = git
 IMX_GSTREAMER1_GIT_SUBMODULES = YES

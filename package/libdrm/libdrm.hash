@@ -4,5 +4,8 @@ sha512  0408c3ae5780c57d19321a9a7b046d656e252b2f48e520b2beb18f83495bea39c445deb9
 
 sha256  170275338ec40d2939a2c72f0c0a15eacd464de09081d1d65cd0abded33ab405 libdrm-lf-5.15.71-2.2.1-br1.tar.gz
 
+# From https://github.com/nxp-imx/libdrm-imx.git
+sha256  7af6e24dccf4b622d269994d81123fad25659ec3b1dae556772a4dd8c93d488f libdrm-lf-6.6.52-2.2.2-git4.tar.gz
+
 # Hash for license file
 sha256  5f5bc266b3c3b3c5c65c739b7aa55b10f2a47ff93afa325ed37f3504196ac1d4  COPYING

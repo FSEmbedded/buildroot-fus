@@ -4,7 +4,7 @@
 #
 ################################################################################
 
-IMX_VPUWRAP_VERSION = lf-5.15.71-2.2.1
+IMX_VPUWRAP_VERSION = lf-6.6.52-2.2.2
 IMX_VPUWRAP_SITE = $(call github,nxp-imx,imx-vpuwrap,$(IMX_VPUWRAP_VERSION))
 IMX_VPUWRAP_INSTALL_STAGING = YES
 
