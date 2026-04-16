@@ -29,6 +29,11 @@ define IMX_CODEC_EXTRACT_CMDS
 	$(call NXP_EXTRACT_HELPER,$(IMX_CODEC_DL_DIR)/$(IMX_CODEC_SOURCE))
 endef
 
+define IMX_CODEC_INSTALL_STAGING_CMDS
+	install -m 0644 $(@D)/release/lib/lib_mp3_enc_arm12_elinux.so \
+		$(STAGING_DIR)/usr/lib/
+endef
+
 # FIXME The Makefile installs both the arm9 and arm11 versions of the
 # libraries, but we only need one of them.
 
