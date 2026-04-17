@@ -16,9 +16,7 @@ config BR2_PACKAGE_WESTON
 	select BR2_PACKAGE_CAIRO_PNG
 	select BR2_PACKAGE_LIBPNG
 	select BR2_PACKAGE_LIBINPUT
-	select BR2_PACKAGE_LIBDISPLAY_INFO
 	select BR2_PACKAGE_LIBDRM
-	select BR2_PACKAGE_SEATD
 	# Runtime dependency
 	select BR2_PACKAGE_XKEYBOARD_CONFIG
 	select BR2_PACKAGE_WESTON_SHELL_DESKTOP if !BR2_PACKAGE_WESTON_HAS_SHELL
@@ -31,6 +29,34 @@ config BR2_PACKAGE_WESTON
 	  http://wayland.freedesktop.org/
 
 if BR2_PACKAGE_WESTON
+
+choice
+	prompt "Weston version"
+	default BR2_PACKAGE_WESTON_V10 if BR2_PACKAGE_IMX_GPU_VIV
+	default BR2_PACKAGE_WESTON_CURRENT
+
+config BR2_PACKAGE_WESTON_V10
+	bool "Weston 10"
+
+config BR2_PACKAGE_WESTON_CURRENT
+	bool "Weston 14 (current)"
+
+endchoice
+
+config BR2_PACKAGE_WESTON_NEEDS_JPEG
+	bool
+	default y if BR2_PACKAGE_WESTON_V10
+	select BR2_PACKAGE_JPEG
+
+config BR2_PACKAGE_WESTON_NEEDS_LIBDISPLAY_INFO
+	bool
+	default y if BR2_PACKAGE_WESTON_CURRENT
+	select BR2_PACKAGE_LIBDISPLAY_INFO
+
+config BR2_PACKAGE_WESTON_NEEDS_SEATD
+	bool
+	default y if BR2_PACKAGE_WESTON_CURRENT
+	select BR2_PACKAGE_SEATD
 
 choice
 	prompt "default compositor"
@@ -49,6 +75,7 @@ config BR2_PACKAGE_WESTON_DEFAULT_HEADLESS
 
 config BR2_PACKAGE_WESTON_DEFAULT_RDP
 	bool "rdp"
+	depends on BR2_PACKAGE_WESTON_CURRENT
 	depends on BR2_USE_MMU # freerdp, libglib2
 	depends on BR2_TOOLCHAIN_HAS_SYNC_4
 	depends on BR2_USE_WCHAR # freerdp
@@ -85,6 +112,15 @@ config BR2_PACKAGE_WESTON_DRM
 config BR2_PACKAGE_WESTON_IMX_FBDEV
 	bool "fbdev compositor (imx)"
 
+config BR2_PACKAGE_WESTON_HEADLESS
+	bool "headless compositor"
+
+config BR2_PACKAGE_WESTON_WAYLAND
+	bool "Wayland (nested)"
+
+config BR2_PACKAGE_WESTON_X11
+	bool "X11 (nested)"
+	depends on BR2_PACKAGE_XORG7
 
 # FreeRDP needs threads and !static, already the case for weston
 config BR2_PACKAGE_WESTON_RDP
@@ -93,9 +129,9 @@ config BR2_PACKAGE_WESTON_RDP
 	depends on BR2_TOOLCHAIN_HAS_SYNC_4
 	depends on BR2_USE_WCHAR # freerdp
 	depends on BR2_INSTALL_LIBSTDCPP # freerdp
-	depends on BR2_PACKAGE_XORG7 # freerdp-server
+	depends on BR2_PACKAGE_XORG7 && BR2_PACKAGE_WESTON_CURRENT # freerdp-server
 	select BR2_PACKAGE_FREERDP
-	select BR2_PACKAGE_FREERDP_SERVER
+	select BR2_PACKAGE_FREERDP_SERVER if BR2_PACKAGE_WESTON_CURRENT
 	help
 	  This enables the RDP backend, which allows accessing weston
 	  through the network with any RDP-compliant client.
@@ -113,7 +149,7 @@ comment "RDP compositor needs a toolchain w/ wchar, C++, X.org"
 	depends on BR2_USE_MMU
 	depends on BR2_TOOLCHAIN_HAS_SYNC_4
 	depends on !BR2_USE_WCHAR || !BR2_INSTALL_LIBSTDCPP || \
-		!BR2_PACKAGE_XORG7
+		(!BR2_PACKAGE_XORG7 && BR2_PACKAGE_WESTON_CURRENT)
 
 config BR2_PACKAGE_WESTON_HEADLESS
 	bool "headless (testing) compositor"
@@ -137,10 +173,11 @@ config BR2_PACKAGE_WESTON_XWAYLAND
 	depends on BR2_USE_MMU # xwayland
 	depends on !BR2_STATIC_LIBS # xwayland
 	depends on BR2_TOOLCHAIN_HAS_THREADS # xwayland
+	depends on (!BR2_RISCV_32 && BR2_PACKAGE_WESTON_V10) || BR2_PACKAGE_WESTON_CURRENT # xwayland -> xlib_libxshmfence
 	depends on BR2_TOOLCHAIN_HAS_SYNC_4 # xwayland -> xlib_libxshmfence
 	select BR2_PACKAGE_CAIRO
 	select BR2_PACKAGE_LIBXCB
-	select BR2_PACKAGE_XCB_UTIL_CURSOR
+	select BR2_PACKAGE_XCB_UTIL_CURSOR if BR2_PACKAGE_WESTON_CURRENT
 	select BR2_PACKAGE_XLIB_LIBX11
 	select BR2_PACKAGE_XLIB_LIBXCURSOR
 	select BR2_PACKAGE_XWAYLAND
@@ -150,6 +187,7 @@ comment "XWayland support needs libepoxy and X.org enabled"
 
 comment "XWayland support needs a toolchain w/ threads, dynamic library"
 	depends on BR2_USE_MMU
+	depends on (!BR2_RISCV_32 && BR2_PACKAGE_WESTON_V10) || BR2_PACKAGE_WESTON_CURRENT
 	depends on BR2_TOOLCHAIN_HAS_SYNC_4
 	depends on !BR2_TOOLCHAIN_HAS_THREADS || BR2_STATIC_LIBS
 
@@ -179,10 +217,12 @@ config BR2_PACKAGE_WESTON_SHELL_KIOSK
 
 config BR2_PACKAGE_WESTON_SCREENSHARE
 	bool "screenshare"
+	depends on BR2_PACKAGE_WESTON_CURRENT
 	default y
 
 config BR2_PACKAGE_WESTON_SIMPLE_CLIENTS
 	bool "simple clients"
+	depends on BR2_PACKAGE_WESTON_CURRENT
 	help
 	  Simple clients includes application such as:
 	  damage, dmabuf-feedback, dmabuf-egl, dmabuf-v4l, egl
@@ -202,7 +242,8 @@ config BR2_PACKAGE_WESTON_DEMO_CLIENTS
 	depends on BR2_TOOLCHAIN_HAS_THREADS # pango
 	depends on BR2_USE_WCHAR # pango
 	depends on BR2_PACKAGE_HAS_LIBGLES
-	depends on BR2_PACKAGE_HAS_LIBEGL
+	depends on BR2_PACKAGE_HAS_LIBEGL || BR2_PACKAGE_WESTON_V10
+	depends on BR2_PACKAGE_HAS_LIBEGL_WAYLAND || BR2_PACKAGE_WESTON_CURRENT
 	select BR2_PACKAGE_PANGO
 	help
 	  This enables the installation of Weston's demo clients.
@@ -224,6 +265,8 @@ comment "demo clients needs an OpenGL ES/EGL provider and a toolchain w/ wchar, 
 	depends on BR2_TOOLCHAIN_HAS_SYNC_4
 	depends on !BR2_INSTALL_LIBSTDCPP || !BR2_TOOLCHAIN_HAS_THREADS || \
 		!BR2_USE_WCHAR || !BR2_PACKAGE_HAS_LIBGLES || \
-		!BR2_PACKAGE_HAS_LIBEGL || !BR2_TOOLCHAIN_GCC_AT_LEAST_4_9
+		(!BR2_PACKAGE_HAS_LIBEGL && BR2_PACKAGE_WESTON_CURRENT) || \
+		(!BR2_PACKAGE_HAS_LIBEGL_WAYLAND && BR2_PACKAGE_WESTON_V10) || \
+		!BR2_TOOLCHAIN_GCC_AT_LEAST_4_9
 
 endif
