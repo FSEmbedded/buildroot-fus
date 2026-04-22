@@ -8,4 +8,4 @@ sha256  170275338ec40d2939a2c72f0c0a15eacd464de09081d1d65cd0abded33ab405 libdrm-
 sha256  7af6e24dccf4b622d269994d81123fad25659ec3b1dae556772a4dd8c93d488f libdrm-lf-6.6.52-2.2.2-git4.tar.gz
 
 # Hash for license file
-sha256  5f5bc266b3c3b3c5c65c739b7aa55b10f2a47ff93afa325ed37f3504196ac1d4  COPYING
+sha256  5f5bc266b3c3b3c5c65c739b7aa55b10f2a47ff93afa325ed37f3504196ac1d4  LICENSE
