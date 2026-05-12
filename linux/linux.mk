@@ -66,7 +66,7 @@ LINUX_PATCH = $(filter ftp://% http://% https://%,$(LINUX_PATCHES))
 # HOST_MAKE_ENV here. In particular, this ensures that our
 # host-pkgconf will look for host libraries and not target ones.
 LINUX_MAKE_ENV = \
-	$(HOST_MAKE_ENV) \
+	$(patsubst GIT_DIR=%,GIT_DIR=$(@D),$(HOST_MAKE_ENV))
 	BR_BINARIES_DIR=$(BINARIES_DIR)
 
 LINUX_INSTALL_IMAGES = YES

@@ -651,7 +651,7 @@ UBOOT_DEPENDENCIES += \
 	$(BR2_FLEX_HOST_DEPENDENCY)
 $(eval $(generic-package))
 else ifeq ($(BR2_TARGET_UBOOT_BUILD_SYSTEM_KCONFIG),y)
-UBOOT_MAKE_ENV = $(TARGET_MAKE_ENV)
+UBOOT_MAKE_ENV = $(patsubst GIT_DIR=%,GIT_DIR=$(@D),$(TARGET_MAKE_ENV))
 # Starting with 2021.10, the kconfig in uboot calls the cross-compiler
 # to check its capabilities. So we need the toolchain before we can
 # call the configurators.
