@@ -651,7 +651,23 @@ UBOOT_DEPENDENCIES += \
 	$(BR2_FLEX_HOST_DEPENDENCY)
 $(eval $(generic-package))
 else ifeq ($(BR2_TARGET_UBOOT_BUILD_SYSTEM_KCONFIG),y)
-UBOOT_MAKE_ENV = $(patsubst GIT_DIR=%,GIT_DIR=$(@D),$(TARGET_MAKE_ENV))
+UBOOT_MAKE_ENV = $(patsubst GIT_DIR=%,GIT_DIR=$(@D)/.git,$(TARGET_MAKE_ENV))
+
+# if the .git directory is a symlink that is broken by copy we need to fix it
+# with a known working Path. This will not change building behaviour or invoke
+# changes on working gits
+# TODO: This should be more streamlined with a config for the symlink source
+# and also check if the Hook needs to be appended at all.
+define UBOOT_GIT_SYMLINK_FIXUP
+	if [ -L $(@D)/.git ]; then \
+		if [ ! -e $(@D)/.git ]; then \
+			unlink $(@D)/.git; \
+			cp -Lr ../.repo/projects/u-boot-fus.git $(@D)/.git; \
+		fi \
+	fi
+endef
+UBOOT_POST_RSYNC_HOOKS += UBOOT_GIT_SYMLINK_FIXUP
+
 # Starting with 2021.10, the kconfig in uboot calls the cross-compiler
 # to check its capabilities. So we need the toolchain before we can
 # call the configurators.

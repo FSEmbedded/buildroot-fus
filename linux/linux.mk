@@ -66,7 +66,7 @@ LINUX_PATCH = $(filter ftp://% http://% https://%,$(LINUX_PATCHES))
 # HOST_MAKE_ENV here. In particular, this ensures that our
 # host-pkgconf will look for host libraries and not target ones.
 LINUX_MAKE_ENV = \
-	$(patsubst GIT_DIR=%,GIT_DIR=$(@D),$(HOST_MAKE_ENV))
+	$(patsubst GIT_DIR=%,GIT_DIR=$(@D)/.git,$(HOST_MAKE_ENV)) \
 	BR_BINARIES_DIR=$(BINARIES_DIR)
 
 LINUX_INSTALL_IMAGES = YES
@@ -152,6 +152,21 @@ endef
 LINUX_POST_EXTRACT_HOOKS += LINUX_XTENSA_OVERLAY_EXTRACT
 LINUX_EXTRA_DOWNLOADS += $(ARCH_XTENSA_OVERLAY_URL)
 endif
+
+# if the .git directory is a symlink that is broken by copy we need to fix it
+# with a known working Path. This will not change building behaviour or invoke
+# changes on working gits
+# TODO: This should be more streamlined with a config for the symlink source
+# and also check if the Hook needs to be appended at all.
+define LINUX_GIT_SYMLINK_FIXUP
+	if [ -L $(@D)/.git ]; then \
+		if [ ! -e $(@D)/.git ]; then \
+			unlink $(@D)/.git; \
+			cp -Lr ../.repo/projects/linux-fus.git $(@D)/.git; \
+		fi \
+	fi
+endef
+LINUX_POST_RSYNC_HOOKS += LINUX_GIT_SYMLINK_FIXUP
 
 # We don't want to run depmod after installing the kernel. It's done in a
 # target-finalize hook, to encompass modules installed by packages.
