@@ -168,6 +168,15 @@ define LINUX_GIT_SYMLINK_FIXUP
 endef
 LINUX_POST_RSYNC_HOOKS += LINUX_GIT_SYMLINK_FIXUP
 
+define LINUX_TEMP_GIT_REMOVE
+	if [ -e ../.repo/projects/linux-fus.git ]; then \
+		if [ ! -L $(@D)/.git ]; then \
+			rm -rf $(@D)/.git; \
+		fi \
+	fi
+endef
+LINUX_PRE_RSYNC_HOOKS += LINUX_TEMP_GIT_REMOVE
+
 # We don't want to run depmod after installing the kernel. It's done in a
 # target-finalize hook, to encompass modules installed by packages.
 # Disable building host tools with -Werror: newer gcc versions can be

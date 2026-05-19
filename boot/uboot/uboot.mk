@@ -668,6 +668,15 @@ define UBOOT_GIT_SYMLINK_FIXUP
 endef
 UBOOT_POST_RSYNC_HOOKS += UBOOT_GIT_SYMLINK_FIXUP
 
+define UBOOT_TEMP_GIT_REMOVE
+	if [ -e ../.repo/projects/u-boot-fus.git ]; then \
+		if [ ! -L $(@D)/.git ]; then \
+			rm -rf $(@D)/.git; \
+		fi \
+	fi
+endef
+UBOOT_PRE_RSYNC_HOOKS += UBOOT_TEMP_GIT_REMOVE
+
 # Starting with 2021.10, the kconfig in uboot calls the cross-compiler
 # to check its capabilities. So we need the toolchain before we can
 # call the configurators.
