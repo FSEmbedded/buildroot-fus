@@ -4,9 +4,9 @@
 #
 ################################################################################
 
-XWAYLAND_VERSION = 24.1.9
+XWAYLAND_VERSION = 23.2.5
 XWAYLAND_SOURCE = xwayland-$(XWAYLAND_VERSION).tar.xz
-XWAYLAND_SITE = https://xorg.freedesktop.org/archive/individual/xserver
+XWAYLAND_SITE = https://www.x.org/archive/individual/xserver
 XWAYLAND_LICENSE = MIT
 XWAYLAND_LICENSE_FILES = COPYING
 XWAYLAND_CPE_ID_VENDOR = x.org
