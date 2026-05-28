@@ -14,16 +14,8 @@ IMX_GST1_PLUGINS_BASE_LICENSE = LGPL-2.1+
 
 # needs access to imx-specific kernel headers
 IMX_GST1_PLUGINS_BASE_DEPENDENCIES += linux_headers
-##IMX_GST1_PLUGINS_BASE_CPPFLAGS = "$(TARGET_CPPFLAGS) -idirafter $(LINUX_DIR)/include/uapi -I$(@D)/libs -std=gnu99"
-#IMX_GST1_PLUGINS_BASE_CFLAGS = $(TARGET_CFLAGS) -std=gnu99 -idirafter $(LINUX_DIR)/include/uapi -I$(@D)/libs/
-#
-#define IMX_GST1_PLUGINS_BASE_IMX_HEADERS
-#	mkdir -p $(@D)/libs/linux
-#	# We need the imx version of dma-buf.h for DMA_BUF_IOCTL_PHYS
-#	cp $(BUILD_DIR)/linux-headers-custom/include/uapi/linux/dma-buf.h $(@D)/libs/linux
-#endef
 
-#IMX_GST1_PLUGINS_BASE_POST_PATCH_HOOKS += IMX_GST1_PLUGINS_BASE_IMX_HEADERS
+GST1_PLUGINS_BASE_CFLAGS = $(TARGET_CFLAGS) -std=gnu99
 
 IMX_GST1_PLUGINS_BASE_CONF_OPTS = \
 	-Dexamples=disabled \
@@ -159,11 +151,11 @@ else
 IMX_GST1_PLUGINS_BASE_CONF_OPTS += -Dencoding=disabled
 endif
 
-#ifeq ($(BR2_PACKAGE_IMX_GST1_PLUGINS_BASE_PLUGIN_VIDEOCONVERT),y)
-#IMX_GST1_PLUGINS_BASE_CONF_OPTS += -Dvideoconvert=enabled
-#else
-#IMX_GST1_PLUGINS_BASE_CONF_OPTS += -Dvideoconvert=disabled
-#endif
+ifeq ($(BR2_PACKAGE_IMX_GST1_PLUGINS_BASE_PLUGIN_VIDEOCONVERTSCALE),y)
+IMX_GST1_PLUGINS_BASE_CONF_OPTS += -Dvideoconvertscale=enabled
+else
+IMX_GST1_PLUGINS_BASE_CONF_OPTS += -Dvideoconvertscale=disabled
+endif
 
 ifeq ($(BR2_PACKAGE_IMX_GST1_PLUGINS_BASE_PLUGIN_GIO),y)
 IMX_GST1_PLUGINS_BASE_CONF_OPTS += -Dgio=enabled
@@ -231,14 +223,8 @@ else
 IMX_GST1_PLUGINS_BASE_CONF_OPTS += -Dvideorate=disabled
 endif
 
-#ifeq ($(BR2_PACKAGE_IMX_GST1_PLUGINS_BASE_PLUGIN_VIDEOSCALE),y)
-#IMX_GST1_PLUGINS_BASE_CONF_OPTS += -Dvideoscale=enabled
-#else
-#IMX_GST1_PLUGINS_BASE_CONF_OPTS += -Dvideoscale=disabled
-#endif
-
-ifeq ($(IMX_BR2_PACKAGE_GST1_PLUGINS_BASE_PLUGIN_VOLUME),y)
-IMX_GST1_PLUGINS_BASE_CONF_OPTS += -Dvolume=enabled
+ifeq ($(BR2_PACKAGE_IMX_GST1_PLUGINS_BASE_PLUGIN_VOLUME),y)
+GST1_IMX_PLUGINS_BASE_CONF_OPTS += -Dvolume=enabled
 else
 IMX_GST1_PLUGINS_BASE_CONF_OPTS += -Dvolume=disabled
 endif

@@ -14,7 +14,7 @@ IMX_GST1_PLUGINS_BAD_INSTALL_STAGING = YES
 IMX_GST1_PLUGINS_BAD_LICENSE_FILES = COPYING
 IMX_GST1_PLUGINS_BAD_LICENSE := LGPL-2.0+, LGPL-2.1+
 
-IMX_GST1_PLUGINS_BAD_CFLAGS = $(TARGET_CFLAGS) -std=gnu17 -D_GNU_SOURCE
+IMX_GST1_PLUGINS_BAD_CFLAGS = $(TARGET_CFLAGS) -std=c99 -D_GNU_SOURCE
 IMX_GST1_PLUGINS_BAD_LDFLAGS = $(TARGET_LDFLAGS) $(TARGET_NLS_LIBS)
 
 IMX_GST1_PLUGINS_BAD_CONF_OPTS = \
@@ -33,6 +33,7 @@ IMX_GST1_PLUGINS_BAD_CONF_OPTS = \
 
 # Options which require currently unpackaged libraries
 IMX_GST1_PLUGINS_BAD_CONF_OPTS += \
+	-Daja=disabled \
 	-Dasio=disabled \
 	-Davtp=disabled \
 	-Dopensles=disabled \
@@ -41,17 +42,22 @@ IMX_GST1_PLUGINS_BAD_CONF_OPTS += \
 	-Dbs2b=disabled \
 	-Dchromaprint=disabled \
 	-Dd3d11=disabled \
+	-Dd3d12=disabled \
 	-Ddc1394=disabled \
 	-Ddts=disabled \
+	-Ddwrite=disabled \
 	-Dresindvd=disabled \
 	-Dfaac=disabled \
 	-Dflite=disabled \
 	-Dgs=disabled \
 	-Dgsm=disabled \
+	-Dinsertbin=disabled \
 	-Dladspa=disabled \
+	-Dlc3=disabled \
 	-Dldac=disabled \
 	-Dlv2=disabled \
 	-Dmediafoundation=disabled \
+	-Dmse=disabled \
 	-Dmicrodns=disabled \
 	-Dlibde265=disabled \
 	-Dmodplug=disabled \
@@ -63,16 +69,22 @@ IMX_GST1_PLUGINS_BAD_CONF_OPTS += \
 	-Dwildmidi=disabled \
 	-Dsmoothstreaming=disabled \
 	-Dsoundtouch=disabled \
+	-Dsvtav1=disabled \
 	-Dgme=disabled \
 	-Dspandsp=disabled \
 	-Dsvthevcenc=disabled \
 	-Dtranscode=disabled \
+	-Dunixfd=disabled \
+	-Dudev=disabled \
+	-Duvcgadget=disabled \
+	-Dvulkan=disabled \
+	-Dx11=disabled \
 	-Dwasapi2=disabled \
-	-Dzxing=disabled \
 	-Dmagicleap=disabled \
 	-Disac=disabled \
 	-Diqa=disabled \
-	-Dopencv=disabled
+	-Dopencv=disabled \
+	-Ddirectfb=disabled
 
 IMX_GST1_PLUGINS_BAD_DEPENDENCIES = imx-gst1-plugins-base imx-gstreamer1
 
@@ -546,13 +558,6 @@ else
 IMX_GST1_PLUGINS_BAD_CONF_OPTS += -Ddecklink=disabled
 endif
 
-ifeq ($(BR2_PACKAGE_IMX_GST1_PLUGINS_BAD_PLUGIN_DIRECTFB),y)
-IMX_GST1_PLUGINS_BAD_CONF_OPTS += -Ddirectfb=enabled
-IMX_GST1_PLUGINS_BAD_DEPENDENCIES += directfb
-else
-IMX_GST1_PLUGINS_BAD_CONF_OPTS += -Ddirectfb=disabled
-endif
-
 ifeq ($(BR2_PACKAGE_IMX_GST1_PLUGINS_BAD_PLUGIN_DVB),y)
 IMX_GST1_PLUGINS_BAD_CONF_OPTS += -Ddvb=enabled
 IMX_GST1_PLUGINS_BAD_DEPENDENCIES += dtv-scan-tables
@@ -743,6 +748,19 @@ else
 IMX_GST1_PLUGINS_BAD_CONF_OPTS += -Duvch264=disabled
 endif
 
+ifeq ($(BR2_PACKAGE_IMX_GST1_PLUGINS_BAD_PLUGIN_VA),y)
+IMX_GST1_PLUGINS_BAD_CONF_OPTS += -Dva=enabled
+IMX_GST1_PLUGINS_BAD_DEPENDENCIES += libva
+ifeq ($(BR2_PACKAGE_LIBDRM),y)
+IMX_GST1_PLUGINS_BAD_CONF_OPTS += -Ddrm=enabled
+IMX_GST1_PLUGINS_BAD_DEPENDENCIES += libdrm
+endif
+else
+IMX_GST1_PLUGINS_BAD_CONF_OPTS += \
+	-Ddrm=disabled \
+	-Dva=disabled
+endif
+
 ifeq ($(BR2_PACKAGE_IMX_GST1_PLUGINS_BAD_PLUGIN_VOAACENC),y)
 IMX_GST1_PLUGINS_BAD_CONF_OPTS += -Dvoaacenc=enabled
 IMX_GST1_PLUGINS_BAD_DEPENDENCIES += vo-aacenc
@@ -798,6 +816,13 @@ IMX_GST1_PLUGINS_BAD_CONF_OPTS += -Dzbar=enabled
 IMX_GST1_PLUGINS_BAD_DEPENDENCIES += zbar
 else
 IMX_GST1_PLUGINS_BAD_CONF_OPTS += -Dzbar=disabled
+endif
+
+ifeq ($(BR2_PACKAGE_IMX_GST1_PLUGINS_BAD_ZXING),y)
+IMX_GST1_PLUGINS_BAD_CONF_OPTS += -Dzxing=enabled
+IMX_GST1_PLUGINS_BAD_DEPENDENCIES += zxing-cpp
+else
+IMX_GST1_PLUGINS_BAD_CONF_OPTS += -Dzxing=disabled
 endif
 
 # Add GPL license if GPL licensed plugins enabled.
