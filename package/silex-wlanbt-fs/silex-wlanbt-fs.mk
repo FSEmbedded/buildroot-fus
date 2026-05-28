@@ -11,6 +11,8 @@ SILEX_WLANBT_FS_SITE = https://git.codelinaro.org/clo/la/platform/vendor/qcom-op
 SILEX_WLANBT_FS_SITE_METHOD = git
 SILEX_WLANBT_FS_LICENSE = GPL-2.0 or BSD
 
+SILEX_WLANBT_FS_CFLAGS = $(TARGET_CFLAGS) -std=gnu99
+
 # Options (taken from Silex driver LEA.3.0 4.5.25.38 sxa 1.0.0.019)
 # necessary for selecting the correct defines in Kbuild.
 #

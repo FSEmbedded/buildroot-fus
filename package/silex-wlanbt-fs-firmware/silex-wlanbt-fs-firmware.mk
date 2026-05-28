@@ -6,7 +6,7 @@
 #
 ################################################################################
 
-SILEX_WLANBT_FS_FIRMWARE_VERSION = v4.5.25.38-1
+SILEX_WLANBT_FS_FIRMWARE_VERSION = v4.5.25.38-2
 SILEX_WLANBT_FS_FIRMWARE_SITE = $(TOPDIR)/package/silex-wlanbt-fs-firmware
 SILEX_WLANBT_FS_FIRMWARE_SOURCE = silex-wlanbt-fs-firmware-$(SILEX_WLANBT_FS_FIRMWARE_VERSION).tar.bz2
 SILEX_WLANBT_FS_FIRMWARE_SITE_METHOD = file

@@ -1,0 +1,337 @@
+From 458fa7e9168769aeb61d9592f011fa0396adcde3 Mon Sep 17 00:00:00 2001
+From: Daniel Dippold <dippold@fs-net.de>
+Date: Fri, 29 May 2026 16:21:38 +0200
+Subject: [PATCH] Fix deprecated API calls
+
+---
+ CORE/CLD_TXRX/TXRX/ol_tx.c                    |  2 +-
+ CORE/CLD_TXRX/TXRX/ol_tx.h                    |  2 +-
+ CORE/CLD_TXRX/TXRX/ol_txrx.c                  |  2 +-
+ CORE/HDD/inc/wlan_hdd_cfg80211.h              |  2 +-
+ CORE/HDD/inc/wlan_hdd_wext.h                  |  2 +-
+ CORE/HDD/src/wlan_hdd_cfg80211.c              | 19 ++++++----
+ CORE/HDD/src/wlan_hdd_main.c                  |  2 +-
+ CORE/HDD/src/wlan_hdd_mdns_offload.c          |  4 +-
+ CORE/HDD/src/wlan_hdd_wext.c                  |  4 +-
+ CORE/MAC/src/pe/lim/limProcessAssocReqFrame.c |  2 +-
+ .../COMMON/adf/linux/adf_os_defer_pvt.h       | 37 +++++++++++++------
+ .../COMMON/adf/linux/adf_os_dma_pvt.h         |  4 +-
+ CORE/SERVICES/COMMON/osdep_adf.h              |  4 ++
+ CORE/SME/src/csr/csrApiRoam.c                 |  2 +-
+ Kbuild                                        |  2 +
+ 15 files changed, 56 insertions(+), 34 deletions(-)
+
+diff --git a/CORE/CLD_TXRX/TXRX/ol_tx.c b/CORE/CLD_TXRX/TXRX/ol_tx.c
+index 250bb4af6..b6cbfefe2 100644
+--- a/CORE/CLD_TXRX/TXRX/ol_tx.c
++++ b/CORE/CLD_TXRX/TXRX/ol_tx.c
+@@ -1593,7 +1593,7 @@ void ol_tx_hl_send_all_tcp_ack(struct ol_txrx_vdev_t *vdev)
+  *
+  * Return: none
+  */
+-void tcp_del_ack_tasklet(unsigned long data)
++void tcp_del_ack_tasklet(void *data)
+ {
+ 	struct ol_txrx_vdev_t *vdev = (struct ol_txrx_vdev_t *)data;
+ 
+diff --git a/CORE/CLD_TXRX/TXRX/ol_tx.h b/CORE/CLD_TXRX/TXRX/ol_tx.h
+index bf09d0b21..4a24e41d4 100644
+--- a/CORE/CLD_TXRX/TXRX/ol_tx.h
++++ b/CORE/CLD_TXRX/TXRX/ol_tx.h
+@@ -113,7 +113,7 @@ ol_tx_ll_queue(ol_txrx_vdev_handle vdev, adf_nbuf_t msdu_list);
+ adf_os_enum_hrtimer_t
+ ol_tx_hl_vdev_tcp_del_ack_timer(adf_os_hrtimer_t *timer);
+ 
+-void tcp_del_ack_tasklet(unsigned long data);
++void tcp_del_ack_tasklet(void *data);
+ 
+ void ol_tx_hl_del_ack_queue_flush_all(struct ol_txrx_vdev_t *vdev);
+ #else
+diff --git a/CORE/CLD_TXRX/TXRX/ol_txrx.c b/CORE/CLD_TXRX/TXRX/ol_txrx.c
+index cd6e08e44..bb4d3ffd3 100644
+--- a/CORE/CLD_TXRX/TXRX/ol_txrx.c
++++ b/CORE/CLD_TXRX/TXRX/ol_txrx.c
+@@ -1079,7 +1079,7 @@ void ol_txrx_vdev_init_tcp_del_ack(struct ol_txrx_vdev_t *vdev)
+ 	adf_os_hrtimer_init(vdev->pdev->osdev,
+ 		&vdev->tcp_ack_hash.timer, ol_tx_hl_vdev_tcp_del_ack_timer);
+ 	adf_os_create_bh(vdev->pdev->osdev, &vdev->tcp_ack_hash.tcp_del_ack_tq,
+-		 (adf_os_defer_fn_t)tcp_del_ack_tasklet, (void *)vdev);
++		 tcp_del_ack_tasklet, (void *)vdev);
+ 	adf_os_atomic_init(&vdev->tcp_ack_hash.is_timer_running);
+ 	adf_os_atomic_init(&vdev->tcp_ack_hash.tcp_node_in_use_count);
+ 	adf_os_spinlock_init(&vdev->tcp_ack_hash.tcp_free_list_lock);
+diff --git a/CORE/HDD/inc/wlan_hdd_cfg80211.h b/CORE/HDD/inc/wlan_hdd_cfg80211.h
+index 06493d35e..bfa440693 100644
+--- a/CORE/HDD/inc/wlan_hdd_cfg80211.h
++++ b/CORE/HDD/inc/wlan_hdd_cfg80211.h
+@@ -3007,7 +3007,7 @@ int wlan_hdd_cfg80211_send_tdls_discover_req(struct wiphy *wiphy,
+ extern void wlan_hdd_cfg80211_update_replayCounterCallback(void *callbackContext,
+                             tpSirGtkOffloadGetInfoRspParams pGtkOffloadGetInfoRsp);
+ #endif
+-void* wlan_hdd_change_country_code_cb(void *pAdapter);
++void wlan_hdd_change_country_code_cb(void *pAdapter);
+ void hdd_select_cbmode(hdd_adapter_t *pAdapter, v_U8_t operationChannel,
+                 uint16_t *ch_width);
+ void hdd_select_mon_cbmode(hdd_adapter_t *adapter, v_U8_t operation_channel,
+diff --git a/CORE/HDD/inc/wlan_hdd_wext.h b/CORE/HDD/inc/wlan_hdd_wext.h
+index 9ecab625d..493d36a46 100644
+--- a/CORE/HDD/inc/wlan_hdd_wext.h
++++ b/CORE/HDD/inc/wlan_hdd_wext.h
+@@ -468,7 +468,7 @@ VOS_STATUS iw_set_tdls_params(struct net_device *dev, struct iw_request_info *in
+ #ifdef WLAN_FEATURE_PACKET_FILTERING
+ int wlan_hdd_set_mc_addr_list(hdd_adapter_t *pAdapter, v_U8_t set);
+ #endif
+-void* wlan_hdd_change_country_code_callback(void *pAdapter);
++void wlan_hdd_change_country_code_callback(void *pAdapter);
+ 
+ VOS_STATUS  wlan_hdd_set_powersave(hdd_adapter_t *pAdapter, int mode);
+ 
+diff --git a/CORE/HDD/src/wlan_hdd_cfg80211.c b/CORE/HDD/src/wlan_hdd_cfg80211.c
+index 247d9f5a2..086d3c6e6 100644
+--- a/CORE/HDD/src/wlan_hdd_cfg80211.c
++++ b/CORE/HDD/src/wlan_hdd_cfg80211.c
+@@ -20115,11 +20115,11 @@ static int wlan_hdd_cfg80211_change_bss (struct wiphy *wiphy,
+ /* FUNCTION: wlan_hdd_change_country_code_cd
+ *  to wait for country code completion
+ */
+-void* wlan_hdd_change_country_code_cb(void *pAdapter)
++void wlan_hdd_change_country_code_cb(void *pAdapter)
+ {
+     hdd_adapter_t *call_back_pAdapter = pAdapter;
+     complete(&call_back_pAdapter->change_country_code);
+-    return NULL;
++    return;
+ }
+ 
+ /*
+@@ -20257,13 +20257,18 @@ static int __wlan_hdd_cfg80211_change_iface(struct wiphy *wiphy,
+ 
+             if ((WLAN_HDD_SOFTAP == pAdapter->device_mode) &&
+                 (pConfig->apRandomBssidEnabled)) {
++		u8 addr[ETH_ALEN];
+                 /* To meet Android requirements create a randomized
+                    MAC address of the form 02:1A:11:Fx:xx:xx */
+-                get_random_bytes(&ndev->dev_addr[3], 3);
+-                ndev->dev_addr[0] = 0x02;
+-                ndev->dev_addr[1] = 0x1A;
+-                ndev->dev_addr[2] = 0x11;
+-                ndev->dev_addr[3] |= 0xF0;
++		get_random_bytes(&addr[3], 3);
++
++                addr[0] = 0x02;
++                addr[1] = 0x1A;
++                addr[2] = 0x11;
++                addr[3] |= 0xF0;
++
++		eth_hw_addr_set(ndev, addr);
++
+                 memcpy(pAdapter->macAddressCurrent.bytes, ndev->dev_addr,
+                        VOS_MAC_ADDR_SIZE);
+                 pr_info("wlan: Generated HotSpot BSSID "MAC_ADDRESS_STR"\n",
+diff --git a/CORE/HDD/src/wlan_hdd_main.c b/CORE/HDD/src/wlan_hdd_main.c
+index 038f77450..d2ae23820 100644
+--- a/CORE/HDD/src/wlan_hdd_main.c
++++ b/CORE/HDD/src/wlan_hdd_main.c
+@@ -10458,7 +10458,7 @@ void hdd_full_pwr_cbk(void *callbackContext, eHalStatus status)
+    hdd_context_t *pHddCtx = (hdd_context_t*)callbackContext;
+ 
+    hddLog(VOS_TRACE_LEVEL_INFO_HIGH,"HDD full Power callback status = %d", status);
+-   if(&pHddCtx->full_pwr_comp_var)
++   if(pHddCtx)
+    {
+       complete(&pHddCtx->full_pwr_comp_var);
+    }
+diff --git a/CORE/HDD/src/wlan_hdd_mdns_offload.c b/CORE/HDD/src/wlan_hdd_mdns_offload.c
+index 1fc55efa3..50c37ce9f 100644
+--- a/CORE/HDD/src/wlan_hdd_mdns_offload.c
++++ b/CORE/HDD/src/wlan_hdd_mdns_offload.c
+@@ -141,7 +141,7 @@ static void wlan_hdd_mdns_format_response_u16(uint16_t value,
+ {
+ 	uint8_t val_u8;
+ 
+-	if ((resp_info == NULL) || (resp_info->resp_data == NULL))
++	if (resp_info == NULL)
+ 		return;
+ 	val_u8 = (value & 0xff00) >> 8;
+ 	resp_info->resp_data[resp_info->resp_len++] = val_u8;
+@@ -161,7 +161,7 @@ static void wlan_hdd_mdns_format_response_u32(uint32_t value,
+ {
+ 	uint8_t val_u8;
+ 
+-	if ((resp_info == NULL) || (resp_info->resp_data == NULL))
++	if (resp_info == NULL)
+ 		return;
+ 	val_u8 = (value & 0xff000000) >> 24;
+ 	resp_info->resp_data[resp_info->resp_len++] = val_u8;
+diff --git a/CORE/HDD/src/wlan_hdd_wext.c b/CORE/HDD/src/wlan_hdd_wext.c
+index 9cf552733..9d5fc16fc 100644
+--- a/CORE/HDD/src/wlan_hdd_wext.c
++++ b/CORE/HDD/src/wlan_hdd_wext.c
+@@ -4274,13 +4274,11 @@ VOS_STATUS wlan_hdd_enter_lowpower(hdd_context_t *pHddCtx)
+ }
+ 
+ 
+-void* wlan_hdd_change_country_code_callback(void *pAdapter)
++void wlan_hdd_change_country_code_callback(void *pAdapter)
+ {
+ 
+     hdd_adapter_t *call_back_pAdapter = pAdapter;
+     complete(&call_back_pAdapter->change_country_code);
+-
+-    return NULL;
+ }
+ 
+ /**
+diff --git a/CORE/MAC/src/pe/lim/limProcessAssocReqFrame.c b/CORE/MAC/src/pe/lim/limProcessAssocReqFrame.c
+index 7872c5a8c..0c3eee963 100644
+--- a/CORE/MAC/src/pe/lim/limProcessAssocReqFrame.c
++++ b/CORE/MAC/src/pe/lim/limProcessAssocReqFrame.c
+@@ -177,7 +177,7 @@ void lim_check_sta_in_pe_entries(tpAniSirGlobal pMac, tpSirMacMgmtHdr pHdr,
+ 
+     for(i = 0; i < pMac->lim.maxBssId; i++)
+     {
+-        if ((&pMac->lim.gpSession[i] != NULL) &&
++        if ((pMac != NULL) &&
+             (pMac->lim.gpSession[i].valid) &&
+             (pMac->lim.gpSession[i].pePersona == VOS_STA_SAP_MODE)) {
+ 
+diff --git a/CORE/SERVICES/COMMON/adf/linux/adf_os_defer_pvt.h b/CORE/SERVICES/COMMON/adf/linux/adf_os_defer_pvt.h
+index f1202b298..9698963a2 100644
+--- a/CORE/SERVICES/COMMON/adf/linux/adf_os_defer_pvt.h
++++ b/CORE/SERVICES/COMMON/adf/linux/adf_os_defer_pvt.h
+@@ -35,7 +35,12 @@
+ #include "vos_cnss.h"
+ #include <adf_os_types.h>
+ 
+-typedef struct tasklet_struct  __adf_os_bh_t;
++typedef struct __adf_os_bh {
++    struct tasklet_struct tasklet;
++    adf_os_defer_fn_t func;
++    void *arg;
++} __adf_os_bh_t;
++
+ typedef struct workqueue_struct __adf_os_workqueue_t;
+ 
+ /**
+@@ -56,8 +61,6 @@ typedef struct {
+ extern void __adf_os_defer_func(struct work_struct *work);
+ extern void __adf_os_defer_delayed_func(struct work_struct *work);
+ 
+-typedef void (*__adf_os_bh_fn_t)(unsigned long arg);
+-
+ static inline a_status_t
+ __adf_os_init_work(adf_os_handle_t    hdl,
+                    __adf_os_work_t      *work,
+@@ -109,12 +112,22 @@ static inline void __adf_os_destroy_workqueue(adf_os_handle_t hdl, __adf_os_work
+     destroy_workqueue(wqueue);
+ }
+ 
+-static inline  a_status_t __adf_os_init_bh(adf_os_handle_t  hdl,
+-                                     struct tasklet_struct *bh,
+-                                     adf_os_defer_fn_t  func,
+-                                     void               *arg)
++static void __adf_tasklet_trampoline(struct tasklet_struct *t)
+ {
+-     tasklet_init(bh, (__adf_os_bh_fn_t)func, (unsigned long)arg);
++	__adf_os_bh_t *bh = from_tasklet(bh, t, tasklet);
++
++	if (bh->func)
++		bh->func(bh->arg);
++}
++
++static inline  a_status_t __adf_os_init_bh(adf_os_handle_t hdl, __adf_os_bh_t *bh,
++                                           adf_os_defer_fn_t func,
++                                           void *arg)
++{
++    bh->func =func;
++	bh->arg = arg;
++
++	tasklet_setup(&bh->tasklet, __adf_tasklet_trampoline);
+ 
+      return A_STATUS_OK;
+ }
+@@ -127,9 +140,9 @@ __adf_os_sched_work(adf_os_handle_t hdl, __adf_os_work_t  * work)
+ }
+ 
+ static inline a_status_t  __adf_os_sched_bh(adf_os_handle_t hdl,
+-                                     struct tasklet_struct * bh)
++                                     __adf_os_bh_t *bh)
+ {
+-    tasklet_schedule(bh);
++    tasklet_schedule(&bh->tasklet);
+ 
+     return A_STATUS_OK;
+ }
+@@ -143,9 +156,9 @@ __adf_os_disable_work(adf_os_handle_t hdl, __adf_os_work_t  * work)
+     return A_STATUS_OK;
+ }
+ static inline a_status_t
+-__adf_os_disable_bh(adf_os_handle_t hdl, struct tasklet_struct *bh)
++__adf_os_disable_bh(adf_os_handle_t hdl, __adf_os_bh_t *bh)
+ {
+-    tasklet_kill(bh);
++    tasklet_kill(&bh->tasklet);
+ 
+     return A_STATUS_OK;
+ }
+diff --git a/CORE/SERVICES/COMMON/adf/linux/adf_os_dma_pvt.h b/CORE/SERVICES/COMMON/adf/linux/adf_os_dma_pvt.h
+index e259fa011..4dbe882e1 100644
+--- a/CORE/SERVICES/COMMON/adf/linux/adf_os_dma_pvt.h
++++ b/CORE/SERVICES/COMMON/adf/linux/adf_os_dma_pvt.h
+@@ -43,8 +43,8 @@
+ #include <adf_os_util.h>
+ 
+ #if (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 10, 0))
+-#define __adf_os_dma_alloc_noncoherent(dev, size, daddr, dir, flag) dma_alloc_noncoherent(dev, size, daddr, dir, flag)
+-#define __adf_os_dma_free_noncoherent(dev, size, vddr, daddr, dir) dma_free_noncoherent(dev, size, vddr, daddr, dir)
++#define __adf_os_dma_alloc_noncoherent(dev, size, daddr, dir, flag) dma_alloc_noncoherent(dev, size, daddr, (enum dma_data_direction)(dir), flag)
++#define __adf_os_dma_free_noncoherent(dev, size, vddr, daddr, dir) dma_free_noncoherent(dev, size, vddr, daddr,	 (enum dma_data_direction)(dir))
+ #elif LINUX_VERSION_CODE >= KERNEL_VERSION(4, 12, 0)
+ #define __adf_os_dma_alloc_noncoherent(dev, size, daddr, flag, attr) dma_alloc_attrs(dev, size, daddr, flag, attr)
+ #define __adf_os_dma_free_noncoherent(dev, size, vddr, daddr, attr) dma_free_attrs(dev, size, vddr, daddr, attr)
+diff --git a/CORE/SERVICES/COMMON/osdep_adf.h b/CORE/SERVICES/COMMON/osdep_adf.h
+index 7a19bea68..7efb121bb 100644
+--- a/CORE/SERVICES/COMMON/osdep_adf.h
++++ b/CORE/SERVICES/COMMON/osdep_adf.h
+@@ -962,8 +962,12 @@ typedef struct scatterlist            sg_t;
+ #define ARRAY_LENGTH(a)         (sizeof(a) / sizeof((a)[0]))
+ #endif
+ 
++#ifndef MIN
+ #define MIN(a, b)                adf_os_min(a, b)
++#endif
++#ifndef MAX
+ #define MAX(a, b)                adf_os_max(a, b)
++#endif
+ 
+ /*
+  * PCI configuration space access
+diff --git a/CORE/SME/src/csr/csrApiRoam.c b/CORE/SME/src/csr/csrApiRoam.c
+index ef0daafb0..d00b02d35 100644
+--- a/CORE/SME/src/csr/csrApiRoam.c
++++ b/CORE/SME/src/csr/csrApiRoam.c
+@@ -7380,7 +7380,7 @@ eHalStatus csrRoamCopyConnectedProfile(tpAniSirGlobal pMac, tANI_U32 sessionId,
+     do
+     {
+         vos_mem_set(pDstProfile, sizeof(tCsrRoamProfile), 0);
+-        if(pSrcProfile->bssid)
++        if(!is_zero_ether_addr(pSrcProfile->bssid))
+         {
+             pDstProfile->BSSIDs.bssid = vos_mem_malloc(sizeof(tCsrBssid));
+             if ( NULL == pDstProfile->BSSIDs.bssid )
+diff --git a/Kbuild b/Kbuild
+index a7fa06431..ae67721a0 100644
+--- a/Kbuild
++++ b/Kbuild
+@@ -1865,6 +1865,8 @@ ifeq ($(call cc-option-yn, -Wheader-guard),y)
+ EXTRA_CFLAGS += -Wheader-guard
+ endif
+ 
++EXTRA_CFLAGS += -Wno-enum-conversion -Wno-enum-int-mismatch
++
+ # If the module name is not "wlan", then the define MULTI_IF_NAME to be the
+ # same a the QCA CHIP name. The host driver will then append MULTI_IF_NAME to
+ # any string that must be unique for all instances of the driver on the system.
+-- 
+2.49.0
+
