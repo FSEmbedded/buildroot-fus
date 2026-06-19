@@ -4,9 +4,9 @@
 #
 ################################################################################
 
-XWAYLAND_VERSION = 23.2.5
+XWAYLAND_VERSION = 24.1.12
 XWAYLAND_SOURCE = xwayland-$(XWAYLAND_VERSION).tar.xz
-XWAYLAND_SITE = https://www.x.org/archive/individual/xserver
+XWAYLAND_SITE = https://xorg.freedesktop.org/archive/individual/xserver
 XWAYLAND_LICENSE = MIT
 XWAYLAND_LICENSE_FILES = COPYING
 XWAYLAND_CPE_ID_VENDOR = x.org
@@ -31,7 +31,7 @@ XWAYLAND_CONF_OPTS = \
 	-Ddocs=false
 
 # glamore is not supported with imx vivante gpus
-ifeq ($(BR2_PACKAGE_LIBDRM)$(BR2_PACKAGE_LIBEPOXY)$(BR2_PACKAGE_IMX_GPU_VIV),yy)
+ifeq ($(BR2_PACKAGE_HAS_LIBEGL)$(BR2_PACKAGE_LIBEPOXY)$(BR2_PACKAGE_HAS_LIBEGL)$(BR2_PACKAGE_LIBEPOXY),yy)
 XWAYLAND_CONF_OPTS += -Dglamor=true
 XWAYLAND_DEPENDENCIES += libepoxy
 else
