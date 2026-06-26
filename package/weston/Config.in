@@ -32,7 +32,7 @@ if BR2_PACKAGE_WESTON
 
 choice
 	prompt "Weston version"
-	default BR2_PACKAGE_WESTON_V10 if BR2_PACKAGE_IMX_GPU_VIV
+	default BR2_PACKAGE_WESTON_V10 if BR2_arm
 	default BR2_PACKAGE_WESTON_CURRENT
 
 config BR2_PACKAGE_WESTON_V10
