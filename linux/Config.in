@@ -558,6 +558,14 @@ config BR2_LINUX_KERNEL_NEEDS_HOST_PYTHON3
 	  Enable this option if you get a Linux kernel build failure
 	  such as "python3: not found".
 
+config BR2_LINUX_KERNEL_SILEX_PATCHES
+	bool "Needs Silex driver patches"
+	depends on BR2_PACKAGE_SILEX_WLANBT_FS
+	default y
+	help
+		When using a Silex WLAN Chip, patches to the kernel are
+		necessary, this option adds these to the Kernel.
+
 # Linux extensions
 source "linux/Config.ext.in"
 

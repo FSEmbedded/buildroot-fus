@@ -1,0 +1,114 @@
+From 120db306a68b2f7b92ac060d1b0fa03926dd1102 Mon Sep 17 00:00:00 2001
+From: S Shreyas <shreyas@silex-india.com>
+Date: Thu, 26 Jun 2025 17:37:30 +0530
+Subject: [PATCH 2/9] Silex: cfg80211: add iw command like radartool
+
+---
+ include/net/cfg80211.h       |  1 +
+ include/uapi/linux/nl80211.h |  2 ++
+ net/wireless/nl80211.c       | 21 +++++++++++++++++++++
+ net/wireless/rdev-ops.h      |  9 +++++++++
+ net/wireless/trace.h         |  5 +++++
+ 5 files changed, 38 insertions(+)
+
+diff --git a/include/net/cfg80211.h b/include/net/cfg80211.h
+index cde8d9e7608..b2a42c0923e 100644
+--- a/include/net/cfg80211.h
++++ b/include/net/cfg80211.h
+@@ -4760,6 +4760,7 @@ struct cfg80211_ops {
+ 				    struct link_station_del_parameters *params);
+ 	int	(*set_hw_timestamp)(struct wiphy *wiphy, struct net_device *dev,
+ 				    struct cfg80211_set_hw_timestamp *hwts);
++	void	(*bangradar)(struct wiphy *wiphy, struct net_device *dev);
+ };
+ 
+ /*
+diff --git a/include/uapi/linux/nl80211.h b/include/uapi/linux/nl80211.h
+index 88eb85c6302..a36f216d45d 100644
+--- a/include/uapi/linux/nl80211.h
++++ b/include/uapi/linux/nl80211.h
+@@ -1569,6 +1569,8 @@ enum nl80211_commands {
+ 
+ 	NL80211_CMD_LINKS_REMOVED,
+ 
++	NL80211_CMD_BANGRADAR,
++
+ 	/* add new commands above here */
+ 
+ 	/* used to define NL80211_CMD_MAX below */
+diff --git a/net/wireless/nl80211.c b/net/wireless/nl80211.c
+index 0fdd614e08d..27e4d406e47 100644
+--- a/net/wireless/nl80211.c
++++ b/net/wireless/nl80211.c
+@@ -16386,6 +16386,18 @@ nl80211_remove_link_station(struct sk_buff *skb, struct genl_info *info)
+ 	return ret;
+ }
+ 
++#if 1 /* silex add for test */
++static int nl80211_bangradar(struct sk_buff *skb, struct genl_info *info)
++{
++       struct cfg80211_registered_device *rdev = info->user_ptr[0];
++       struct net_device *dev = info->user_ptr[1];
++
++       rdev_bangradar(rdev, dev);
++
++       return 0;
++}
++#endif
++
+ static int nl80211_set_hw_timestamp(struct sk_buff *skb,
+ 				    struct genl_info *info)
+ {
+@@ -17590,6 +17602,15 @@ static const struct genl_small_ops nl80211_small_ops[] = {
+ 		.flags = GENL_UNS_ADMIN_PERM,
+ 		.internal_flags = IFLAGS(NL80211_FLAG_NEED_NETDEV_UP),
+ 	},
++#if 1 /* silex add for test */
++       {
++               .cmd = NL80211_CMD_BANGRADAR,
++               .doit = nl80211_bangradar,
++               .flags = GENL_UNS_ADMIN_PERM,
++               .internal_flags = NL80211_FLAG_NEED_NETDEV_UP |
++                                 NL80211_FLAG_NEED_RTNL,
++       },
++#endif
+ };
+ 
+ static struct genl_family nl80211_fam __ro_after_init = {
+diff --git a/net/wireless/rdev-ops.h b/net/wireless/rdev-ops.h
+index f8f114a8dc0..b9e825aaff4 100644
+--- a/net/wireless/rdev-ops.h
++++ b/net/wireless/rdev-ops.h
+@@ -1528,4 +1528,13 @@ rdev_set_hw_timestamp(struct cfg80211_registered_device *rdev,
+ 
+ 	return ret;
+ }
++
++static inline void rdev_bangradar(struct cfg80211_registered_device *rdev,
++                                  struct net_device *netdev)
++{
++       trace_rdev_bangradar(&rdev->wiphy, netdev);
++       rdev->ops->bangradar(&rdev->wiphy, netdev);
++       trace_rdev_return_void(&rdev->wiphy);
++}
++
+ #endif /* __CFG80211_RDEV_OPS */
+diff --git a/net/wireless/trace.h b/net/wireless/trace.h
+index df92ee4d91d..5912131aa69 100644
+--- a/net/wireless/trace.h
++++ b/net/wireless/trace.h
+@@ -730,6 +730,11 @@ DEFINE_EVENT(wiphy_netdev_evt, rdev_end_cac,
+ 	     TP_ARGS(wiphy, netdev)
+ );
+ 
++DEFINE_EVENT(wiphy_netdev_evt, rdev_bangradar,
++            TP_PROTO(struct wiphy *wiphy, struct net_device *netdev),
++            TP_ARGS(wiphy, netdev)
++);
++
+ DECLARE_EVENT_CLASS(station_add_change,
+ 	TP_PROTO(struct wiphy *wiphy, struct net_device *netdev, u8 *mac,
+ 		 struct station_parameters *params),
+-- 
+2.49.0
+

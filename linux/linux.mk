@@ -163,10 +163,27 @@ define LINUX_GIT_SYMLINK_FIXUP
 		if [ ! -e $(@D)/.git ]; then \
 			unlink $(@D)/.git; \
 			cp -Lr ../.repo/projects/linux-fus.git $(@D)/.git; \
-		fi \
+		fi; \
 	fi
 endef
 LINUX_POST_RSYNC_HOOKS += LINUX_GIT_SYMLINK_FIXUP
+
+ifeq ($(BR2_LINUX_KERNEL_SILEX_PATCHES),y)
+define LINUX_PATCH_FOR_SILEX_WLAN
+	cd $(@D) && \
+	git reset --hard HEAD && \
+	git clean -fd && \
+	TAG=$$(git describe --exact-match --abbrev=0 2>/dev/null || true) && \
+	for p in $(TOPDIR)/board/f+s/silex-patches/linux/*.patch; do \
+		git -c user.email="buildroot-fus@localhost" -c user.name="buildroot-fus" am "$$p" || exit 1; \
+	done && \
+	if [ -n "$$TAG" ]; then \
+		git -c user.email="buildroot-fus@localhost" -c user.name="buildroot-fus" tag -a "$${TAG}-silex-patched" -m "$${TAG}-silex-patched"; \
+	fi
+endef
+LINUX_POST_RSYNC_HOOKS += LINUX_PATCH_FOR_SILEX_WLAN
+endif
+
 
 define LINUX_TEMP_GIT_REMOVE
 	if [ -e ../.repo/projects/linux-fus.git ]; then \

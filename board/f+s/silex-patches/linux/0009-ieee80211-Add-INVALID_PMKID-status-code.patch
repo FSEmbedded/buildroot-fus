@@ -1,0 +1,35 @@
+From 135de4f4855676eabd058d9362a248deb246de89 Mon Sep 17 00:00:00 2001
+From: "R.Shimoji" <shimoji@silex.jp>
+Date: Wed, 21 Jun 2023 13:15:32 +0900
+Subject: [PATCH 9/9] ieee80211: Add INVALID_PMKID status code
+
+---
+ include/linux/ieee80211.h             | 1 +
+ net/wireless/certs/silex.x509.pem.hex | 2 +-
+ 2 files changed, 2 insertions(+), 1 deletion(-)
+
+diff --git a/include/linux/ieee80211.h b/include/linux/ieee80211.h
+index 38e3e81b880..a61df5da3b8 100644
+--- a/include/linux/ieee80211.h
++++ b/include/linux/ieee80211.h
+@@ -3281,6 +3281,7 @@ enum ieee80211_statuscode {
+ 	WLAN_STATUS_NO_DIRECT_LINK = 48,
+ 	WLAN_STATUS_STA_NOT_PRESENT = 49,
+ 	WLAN_STATUS_STA_NOT_QSTA = 50,
++	WLAN_STATUS_INVALID_PMKID = 53,
+ 	/* 802.11s */
+ 	WLAN_STATUS_ANTI_CLOG_REQUIRED = 76,
+ 	WLAN_STATUS_FCG_NOT_SUPP = 78,
+diff --git a/net/wireless/certs/silex.x509.pem.hex b/net/wireless/certs/silex.x509.pem.hex
+index 242beb54ca4..8b282552308 100644
+--- a/net/wireless/certs/silex.x509.pem.hex
++++ b/net/wireless/certs/silex.x509.pem.hex
+@@ -83,4 +83,4 @@
+   0x64, 0x5c, 0x7c, 0xa9, 0x03, 0x1f, 0x43, 0x18,
+   0x89, 0x26, 0x7e, 0x04, 0x6e, 0x08, 0xb0, 0x33,
+   0x81, 0x96, 0xd2, 0xd4, 0xb8, 0xc6, 0x1e, 0x26,
+-  0x86, 0xfe, 0x8b, 0xa8, 0x0c
++  0x86, 0xfe, 0x8b, 0xa8, 0x0c,
+-- 
+2.49.0
+
