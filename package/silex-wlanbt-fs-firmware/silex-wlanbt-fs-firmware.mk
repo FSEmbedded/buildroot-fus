@@ -7,9 +7,9 @@
 ################################################################################
 
 SILEX_WLANBT_FS_FIRMWARE_VERSION = v4.5.25.38-2
-SILEX_WLANBT_FS_FIRMWARE_SITE = $(TOPDIR)/package/silex-wlanbt-fs-firmware
+SILEX_WLANBT_FS_FIRMWARE_SITE = https://www.fs-net.de/assets/download/bin/public/Silex
 SILEX_WLANBT_FS_FIRMWARE_SOURCE = silex-wlanbt-fs-firmware-$(SILEX_WLANBT_FS_FIRMWARE_VERSION).tar.bz2
-SILEX_WLANBT_FS_FIRMWARE_SITE_METHOD = file
+SILEX_WLANBT_FS_FIRMWARE_SITE_METHOD = wget
 SILEX_WLANBT_FS_FIRMWARE_LICENSE = Proprietary
 #SILEX_WLANBT_FS_FIRMWARE_DEPENDENCIES = silex-wlanbt-fs
 
