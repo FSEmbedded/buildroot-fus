@@ -1,0 +1,26 @@
+From 16c1f67998666d01b3abb1dcda8c35d56a18b257 Mon Sep 17 00:00:00 2001
+Message-Id: <16c1f67998666d01b3abb1dcda8c35d56a18b257.1697699128.git.gerbach@fs-net.de>
+From: Philipp Gerbach <gerbach@fs-net.de>
+Date: Thu, 19 Oct 2023 09:05:18 +0200
+Subject: [PATCH] Revert wayland-scanner commit
+
+Revert commit 05df61b "protocol: no found wayland-scanner with Yocto
+toolchain" because with buildroot the wayland-scanner binary doesn't get
+found anymore
+---
+ protocol/meson.build | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/protocol/meson.build b/protocol/meson.build
+index bdd322ac..e50b23bb 100644
+--- a/protocol/meson.build
++++ b/protocol/meson.build
+@@ -1,4 +1,4 @@
+-dep_scanner = dependency('wayland-scanner', native: false)
++dep_scanner = dependency('wayland-scanner', native: true)
+ prog_scanner = find_program(dep_scanner.get_variable(pkgconfig: 'wayland_scanner'))
+ 
+ dep_wp = dependency('wayland-protocols', version: '>= 1.31',
+-- 
+2.40.1
+

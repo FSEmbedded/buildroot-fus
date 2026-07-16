@@ -101,14 +101,6 @@ else
 WESTON_CONF_OPTS += -Dbackend-drm=false
 endif
 
-ifeq ($(BR2_PACKAGE_WESTON_IMX_FBDEV),y)
-WESTON_CONF_OPTS += -Dbackend-fbdev=true
-WESTON_CONF_OPTS += -Degl=false
-else
-WESTON_CONF_OPTS += -Dbackend-fbdev=false
-endif
-
-
 ifeq ($(BR2_PACKAGE_WESTON_HEADLESS),y)
 WESTON_CONF_OPTS += -Dbackend-headless=true
 else
