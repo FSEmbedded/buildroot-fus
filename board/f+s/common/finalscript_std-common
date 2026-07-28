@@ -34,7 +34,11 @@ install -m 0664 ${COMMON}/etc/wpa_supplicant.conf ${TARGET}/etc/
 # Copy the weston start script
 if grep ^BR2_PACKAGE_WESTON=y $BR2_CONFIG > /dev/null; then
     # Copy start script for weston client
-    ${CP} ${COMMON}/etc/init.d/S98weston ${TARGET}/etc/init.d
+    if grep ^BR2_arm=y $BR2_CONFIG > /dev/null; then
+    	${CP} ${COMMON}/etc/init.d/S98weston_legacy ${TARGET}/etc/init.d/S98weston
+    elif grep ^BR2_aarch64=y $BR2_CONFIG > /dev/null; then
+    	${CP} ${COMMON}/etc/init.d/S98weston ${TARGET}/etc/init.d/S98weston
+    fi
     # Setup weston environment
     mkdir -p ${TARGET}/etc/profile.d
     ${CP} ${COMMON}/etc/profile.d/weston.sh ${TARGET}/etc/profile.d

@@ -21,7 +21,7 @@ case "$1" in
 
 	# Start weston client
 	start-stop-daemon -S -q -m -b -p /var/run/weston.pid \
-	-x /usr/bin/weston -- --log=/var/log/weston.log
+	-x /usr/bin/weston -- --tty=1 --log=/var/log/weston.log
 
 	# We need to set the X11 environment variables AFTER weston is started
 	# or else weston will try to start with X11 backend
@@ -39,7 +39,7 @@ case "$1" in
 
 	# Stop weston client
 	start-stop-daemon -K -q -m -b -p /var/run/weston.pid \
-	-x /usr/bin/weston -- --log=/var/log/weston.log
+	-x /usr/bin/weston -- --tty=1 --log=/var/log/weston.log
 	;;
 
     restart|reload)
