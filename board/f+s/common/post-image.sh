@@ -23,10 +23,10 @@ freertos_sample_list()
 #
 dtb_list()
 {
-	local DTB_LIST="$(sed -n 's/^BR2_LINUX_KERNEL_INTREE_DTS_NAME="\([A-Z \+ | \. \+ | \/a-z0-9 \-]*\)"$/\1/p' ${BR2_CONFIG})"
+	local DTB_LIST="$(sed -n 's/^BR2_LINUX_KERNEL_[A-Z \+ | \. \+ | \/a-z0-9 \-]*_DTS_[A-Z \+ | \. \+ | \/a-z0-9 \-]*="\([A-Z \+ | \. \+ | \/a-z0-9 \-]*\)"$/\1/p' ${BR2_CONFIG})"
 
 	for dt in $DTB_LIST; do
-		echo -n "\"`basename $dt`.dtb\", "
+		echo -n "\"`basename ${dt%.*}`.dtb\", "
 	done
 }
 
@@ -65,6 +65,12 @@ genimage_type()
 			echo "genimage.cfg.template.imx8mm.update"
 		else
 			echo "genimage.cfg.template.imx8mm.std"
+		fi
+	elif grep -Eq "^BR2_PACKAGE_FREESCALE_IMX_PLATFORM_IMX8MP=y$" ${BR2_CONFIG}; then
+		if grep -Eq "^BR2_PACKAGE_FS_UPDATE_SOLUTION=y$" ${BR2_CONFIG}; then
+			echo "genimage.cfg.template.imx8mp.update"
+		else
+			echo "genimage.cfg.template.imx8mp.std"
 		fi
 	elif grep -Eq "^BR2_PACKAGE_FREESCALE_IMX_PLATFORM_IMX8X=y$" ${BR2_CONFIG}; then
 		echo "genimage.cfg.template_imx8"
