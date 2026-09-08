@@ -8,6 +8,7 @@ ifeq ($(BR2_PACKAGE_FREESCALE_IMX),y)
 WESTON_VERSION = lf-6.6.52-2.2.2-weston-10
 WESTON_SITE = https://github.com/nxp-imx/weston-imx.git
 WESTON_SITE_METHOD = git
+WESTON_CPE_ID_VERSION = 10.0.3
 else
 WESTON_VERSION = 10.0.1
 WESTON_SITE = https://gitlab.freedesktop.org/wayland/weston/-/releases/$(WESTON_VERSION)/downloads
