@@ -1,0 +1,21 @@
+#!/bin/sh
+
+case "$1" in
+    start)
+        for file in /etc/modules-load.d/*.conf; do
+            [ -f "$file" ] || continue
+
+            while IFS= read -r line; do
+                line="$(echo "$line" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')"
+                [ -z "$line" ] && continue
+                case "$line" in
+                    \#*) continue ;;
+                esac
+
+                modprobe "$line"
+            done < "$file"
+        done
+        ;;
+esac
+
+exit 0

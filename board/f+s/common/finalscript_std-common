@@ -85,3 +85,11 @@ if grep ^BR2_PACKAGE_FS_UPDATE_SOLUTION=y $BR2_CONFIG > /dev/null; then
 		${CP}  ${COMMON}/etc/fw_env.config.mmc ${TARGET}/etc/fw_env.config
 	fi
 fi
+
+if  grep ^BR2_PACKAGE_NXP_MWIFIEX=y $BR2_CONFIG > /dev/null; then
+	install -d ${TARGET}/etc/modprobe.d/
+	install -d ${TARGET}/etc/modules-load.d/
+	install -m 0755	${COMMON}/etc/modprobe.d/mxm-wifiex.conf ${TARGET}/etc/modprobe.d/mxm-wifiex.conf
+	install -m 0755	${COMMON}/etc/modules-load.d/mxm-wifiex-filters.conf ${TARGET}/etc/modules-load.d/mxm-wifiex-filters.conf
+	install -m 0755 ${COMMON}/etc/init.d/S39modules ${TARGET}/etc/init.d/S39modules
+fi
