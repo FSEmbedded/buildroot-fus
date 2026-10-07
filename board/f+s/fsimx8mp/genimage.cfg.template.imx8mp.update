@@ -1,0 +1,105 @@
+# Minimal SD card image for the Freescale iMX8 boards
+#
+# We mimic the .sdcard Freescale's image format:
+# * the SD card must have 33 kB free space at the beginning,
+# * U-Boot is integrated into fsimx8m-boot-.bin and is dumped as is,
+# * a FAT partition at offset 8MB is containing Image and DTB files
+# * a single root filesystem partition is required (ext2, ext3 or ext4)
+#
+
+image boot.vfat {
+	vfat {
+		files = {
+			%FILES%
+		}
+	}
+	size = 64M
+}
+
+image data.ext4 {
+	ext4 {}
+	name = "data"
+	size = 200M
+	mountpoint = "/rw_fs/root"
+}
+
+image data.ubifs {
+	ubifs {}
+	size = 200M
+	mountpoint = "/rw_fs/root"
+}
+
+image uboot.vfat {
+	vfat {}
+	empty = "true"
+	name = "uboot"
+	size = 8M
+}
+
+image sdcard_rauc.img {
+  hdimage {
+	extended-partition = 3
+  }
+
+  partition imx-boot {
+    in-partition-table = "no"
+    image = "%UBOOTBIN%"
+    offset = %IMXOFFSET%
+  }
+
+  partition UBootA {
+    offset = 8M
+	image = "uboot.vfat"
+  }
+
+  partition UBootB {
+    image = "uboot.vfat"
+  }
+
+  partition bootA {
+   partition-type = 0xC
+   bootable = "true"
+   image = "boot.vfat"
+
+  }
+  partition bootB {
+   partition-type = 0xC
+   bootable = "true"
+   image = "boot.vfat"
+
+  }
+  partition rootfsA {
+    partition-type = 0x83
+    image = "rootfs.squashfs"
+	size = 150M
+  }
+
+  partition rootfsB {
+    partition-type = 0x83
+    image = "rootfs.squashfs"
+	size = 150M
+  }
+
+  partition data {
+	image = "data.ext4"
+  }
+}
+
+flash nand-512M {
+
+    pebsize = 131072
+    lebsize = 126976
+    numpebs = 4096
+    minimum-io-unit-size = 2048
+    vid-header-offset = 2048
+    sub-page-size = 2048
+}
+
+image nand.img {
+	flash {
+	}
+	flashtype = "nand-512M"
+	partition data {
+		image = "data.ubifs"
+	}
+}
